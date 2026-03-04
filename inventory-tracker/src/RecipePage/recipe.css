@@ -1,0 +1,89 @@
+/* --- Header Layout --- */
+.recipe-header {
+  margin-bottom: 30px;
+}
+
+/* --- Card Grid Layout --- */
+.recipe-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 24px;
+  margin-top: 20px;
+}
+
+/* --- Individual Recipe Card --- */
+.recipe-card {
+  background: white;
+  padding: 24px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.recipe-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.recipe-card h3 {
+  color: var(--primary-color); /* Your Indigo Color */
+  font-size: 18px;
+  margin-bottom: 12px;
+  border-bottom: 2px solid #f3f4f6;
+  padding-bottom: 8px;
+}
+
+/* --- Ingredients List Styling --- */
+.ingredients-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  color: #9ca3af;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.ingredients-text {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #4b5563;
+  background: #f9fafb;
+  padding: 12px;
+  border-radius: 8px;
+}
+
+/* --- Action Button inside Card --- */
+.edit-recipe-btn {
+  margin-top: 15px;
+  background: transparent;
+  color: var(--primary-color);
+  border: 1px solid var(--primary-color);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.edit-recipe-btn:hover {
+  background: var(--primary-color);
+  color: white;
+}
+
+
+/* --- Transaction Status Tags --- */
+.stock-tag {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* --- Hover Effect for Rows --- */
+.inventory-table tr:hover td {
+  background-color: #f9fafb;
+  cursor: default;
+}

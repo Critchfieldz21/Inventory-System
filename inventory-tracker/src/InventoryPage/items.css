@@ -1,0 +1,66 @@
+.item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.add-btn {
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.table-container {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  padding: 20px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.search-bar {
+  width: 100%;
+  max-width: 300px;
+  padding: 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.inventory-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.inventory-table th {
+  padding: 12px;
+  border-bottom: 2px solid #f3f4f6;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.inventory-table td {
+  padding: 15px 12px;
+  border-bottom: 1px solid #f3f4f6;
+  font-size: 14px;
+}
+
+.stock-tag.healthy {
+  background: #ecfdf5;
+  color: #10b981;
+}
+
+.stock-tag.warning {
+  background: #fffbeb;
+  color: #d97706;
+}
+
+.stock-tag.critical {
+  background: #fee2e2;
+  color: #b91c1c;
+}
