@@ -1,24 +1,26 @@
-import React, { useState } from 'react'; // 1. Import useState
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import logo from '../images/inventory_logo.png';
 import './loginPage.css';
 
 function LoginPage() {
   const navigate = useNavigate();
-  
-  // 2. Create state for the inputs
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
   const handleLogin = (e) => {
-    e.preventDefault(); // Prevents page refresh
-
-    // 3. Add your "Correct" credentials check
-    if (username === "admin" && password === "123") {
-      navigate('/home'); // Redirects on success
+    e.preventDefault();
+    if (username.trim() === "admin" && password === "123") {
+      navigate('/home');
     } else {
-      alert("Invalid username or password!"); // Error feedback
+      alert("Invalid username or password!");
     }
+  };
+
+  const handleForgotLogin = (e) => {
+    e.preventDefault(); // Prevents form submission
+    // Logic for forgot login (e.g., navigate to reset page)
+    alert("Redirecting to account recovery...");
   };
 
   return (
@@ -26,9 +28,7 @@ function LoginPage() {
       <div className="login-box">
         <div className="header">
           <img src={logo} className="login-logo" alt="logo" />
-          <p>Please enter your details to sign in.</p>
         </div>
-        
         <form className="login-form" onSubmit={handleLogin}>
           <div className="input-group">
             <label>Username</label>
@@ -36,23 +36,33 @@ function LoginPage() {
               type="text" 
               placeholder="Username" 
               required 
-              value={username}
-              onChange={(e) => setUsername(e.target.value)} // Update state
+              value={username} 
+              onChange={(e) => setUsername(e.target.value)} 
             />
           </div>
-          
           <div className="input-group">
             <label>Password</label>
             <input 
               type="password" 
               placeholder="Password" 
               required 
-              value={password}
-              onChange={(e) => setPassword(e.target.value)} // Update state
+              value={password} 
+              onChange={(e) => setPassword(e.target.value)} 
             />
           </div>
-
+          
           <button type="submit" className="login-button">Sign In</button>
+
+          {/* Forgot Login Link placed under the button */}
+          <div className="forgot-login-container" style={{ textAlign: 'center', marginTop: '15px' }}>
+            <a 
+              href="/forgot-password" 
+              onClick={handleForgotLogin}
+              style={{ fontSize: '0.85rem', color: '#007bff', textDecoration: 'none' }}
+            >
+              Forgot Login?
+            </a>
+          </div>
         </form>
       </div>
     </div>

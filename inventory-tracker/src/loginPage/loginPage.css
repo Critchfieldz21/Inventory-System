@@ -88,3 +88,20 @@ input:focus {
 .login-footer{
   margin-top: 20px;
 }
+
+.forgot-login-wrapper {
+  text-align: center;
+  margin-top: 15px;
+}
+
+.forgot-login-link {
+  font-size: 0.85rem;
+  color: #007bff;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.forgot-login-link:hover {
+  color: #0056b3;
+  text-decoration: underline;
+}
