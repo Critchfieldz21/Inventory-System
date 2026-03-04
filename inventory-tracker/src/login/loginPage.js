@@ -21,10 +21,12 @@ function App() {
             <input type="password" placeholder="Password" required />
           </div>
 
-
           <button type="submit" className="login-button">Sign In</button>
         </form>
-        
+
+        <div className="login-footer">
+          <a href="/forgot-password">Forgot password?</a>
+        </div>
         
       </div>
     </div>
