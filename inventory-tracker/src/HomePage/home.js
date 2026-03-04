@@ -12,13 +12,13 @@ import {
 import './home.css';
 
 const weeklyData = [
-  { name: 'Mon', sales: 4000 },
-  { name: 'Tue', sales: 3000 },
-  { name: 'Wed', sales: 2000 },
-  { name: 'Thu', sales: 2780 },
-  { name: 'Fri', sales: 1890 },
-  { name: 'Sat', sales: 2390 },
-  { name: 'Sun', sales: 3490 },
+  { name: 'Mon', profit: 4000 },
+  { name: 'Tue', profit: 3000 },
+  { name: 'Wed', profit: 2000 },
+  { name: 'Thu', profit: 2780 },
+  { name: 'Fri', profit: 1890 },
+  { name: 'Sat', profit: 2390 },
+  { name: 'Sun', profit: 3490 },
 ];
 
 function Home() {
@@ -46,11 +46,11 @@ function Home() {
 
         {/* --- Top Section: Trend Graph --- */}
         <div className="chart-container">
-          <h3 className="card-title">Weekly Sales Trend</h3>
+          <h3 className="card-title">Weekly Profits </h3>
           <ResponsiveContainer width="100%" height={300}>
             <AreaChart data={weeklyData}>
               <defs>
-                <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.8}/>
                   <stop offset="95%" stopColor="#4f46e5" stopOpacity={0}/>
                 </linearGradient>
@@ -61,10 +61,10 @@ function Home() {
               <Tooltip />
               <Area 
                 type="monotone" 
-                dataKey="sales" 
+                dataKey="profit" 
                 stroke="#4f46e5" 
                 fillOpacity={1} 
-                fill="url(#colorSales)" 
+                fill="url(#colorProfit)" 
               />
             </AreaChart>
           </ResponsiveContainer>
