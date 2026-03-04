@@ -1,12 +1,10 @@
 /* --- Global Variables --- */
-/* Stores your brand's primary indigo color and the purple-to-blue background gradient */
 :root {
   --primary-color: #4f46e5;
   --bg-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
 /* --- Layout Wrapper --- */
-/* Makes the background cover the whole screen and centers the login box both vertically and horizontally */
 .login-container {
   height: 100vh;
   display: flex;
@@ -17,11 +15,10 @@
 }
 
 /* --- Card Styling --- */
-/* Creates the white 'card' effect with rounded corners, internal spacing, and a subtle shadow */
 .login-box {
   background: white;
-  padding: 2.5rem;
-  border-radius: 1rem;
+  padding: 40px;
+  border-radius: 16px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
   width: 100%;
   max-width: 400px;
@@ -29,67 +26,65 @@
 }
 
 /* --- Branding --- */
-/* Defines the specific size for your inventory tracker logo within the card */
 .login-logo {
   height: 300px;
   width: 300px;
   margin-bottom: 10px;
 }
 
-
-/* Sets a lighter gray color and smaller font for the secondary description text */
-p { 
-  color: #6b7280; 
-  margin-bottom: 10px; 
-  font-size: 0.875rem; 
+p {
+  color: #6b7280;
+  margin-bottom: 10px;
+  font-size: 14px;
 }
 
 /* --- Form Fields --- */
-/* Adds spacing between each input block and aligns labels to the left */
 .input-group {
   text-align: left;
-  margin-bottom: 1.25rem;
+  margin-bottom: 20px;
 }
 
-/* Styles the 'Email' and 'Password' text labels to be bold and compact */
 .input-group label {
   display: block;
-  font-size: 0.875rem;
+  font-size: 18px;
   font-weight: 500;
-  margin-bottom: 0.5rem;
+  margin-bottom: 8px;
   color: #374151;
 }
 
-/* Standardizes the appearance of inputs: full width, padding for comfort, and a light border */
-input[type="text"], input[type="password"] {
+input[type="text"], 
+input[type="password"] {
   width: 100%;
-  padding: 0.75rem;
+  padding: 12px;
   border: 1px solid #d1d5db;
-  border-radius: 0.5rem;
-  font-size: 1rem;
+  border-radius: 8px;
+  font-size: 16px;
   box-sizing: border-box;
 }
 
 /* --- Interaction States --- */
-/* When the user clicks an input, it replaces the border with a thick primary-color outline */
 input:focus {
   outline: 2px solid var(--primary-color);
   border-color: transparent;
 }
 
 /* --- Action Button --- */
-/* Styles the 'Sign In' button with the primary color, bold white text, and a rounded shape */
 .login-button {
   width: 100%;
   background: var(--primary-color);
   color: white;
-  padding: 0.75rem;
+  padding: 12px;
   border: none;
-  border-radius: 0.5rem;
+  border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s;
 }
 
-/* Slightly darkens the button when the user hovers over it to indicate it is clickable */
-.login-button:hover { background: #4338ca; }
+.login-button:hover {
+  background: #4338ca;
+}
+
+.login-footer{
+  margin-top: 20px;
+}
