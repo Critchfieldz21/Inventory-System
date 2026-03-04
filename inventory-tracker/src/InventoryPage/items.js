@@ -32,7 +32,6 @@ function Items() {
         <header className="content-header item-header">
           <div>
             <h1>Inventory Items</h1>
-            <p>Manage and track your current stock levels.</p>
           </div>
         </header>
 

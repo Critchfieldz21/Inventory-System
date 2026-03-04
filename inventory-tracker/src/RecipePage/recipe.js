@@ -24,7 +24,6 @@ function Recipe() {
       <main className="main-content">
         <header className="content-header">
           <h1>Recipe Management</h1>
-          <p>Define ingredient usage for your menu items.</p>
         </header>
         <div className="stats-grid" style={{gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))'}}>
           {recipes.map((r, i) => (

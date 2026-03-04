@@ -42,7 +42,6 @@ function Home() {
       <main className="main-content">
         <header className="content-header">
           <h1>Dashboard Overview</h1>
-          <p>Inventory performance over the last 7 days.</p>
         </header>
 
         {/* --- Top Section: Trend Graph --- */}

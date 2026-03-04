@@ -25,7 +25,6 @@ function Sales() {
       <main className="main-content">
         <header className="content-header">
           <h1>Sales History</h1>
-          <p>Track your revenue and recent transactions.</p>
         </header>
         <div className="table-container">
           <table className="inventory-table">
