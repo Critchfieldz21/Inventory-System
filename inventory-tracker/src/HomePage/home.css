@@ -17,6 +17,13 @@
   font-family: 'Inter', sans-serif;
 }
 
+.sidebar-logo-img {
+  align-self: center;
+  width: 100px;
+  height: 100px;
+  margin-bottom: 20px;
+}
+
 /* --- Sidebar --- */
 .sidebar {
   width: 260px;

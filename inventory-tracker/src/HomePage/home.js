@@ -1,15 +1,8 @@
 import React from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { 
-  AreaChart, 
-  Area, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer 
-} from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import './home.css';
+
 
 const weeklyData = [
   { name: 'Mon', profit: 4000 },
@@ -79,11 +72,11 @@ function Home() {
               <h3>Top 5 Items Sold</h3>
             </div>
             <ul className="status-list">
-              <li className="list-item"><span>1. Burger Buns</span> <strong>420 sold</strong></li>
-              <li className="list-item"><span>2. Beef Patties</span> <strong>385 sold</strong></li>
-              <li className="list-item"><span>3. Cheddar Cheese</span> <strong>310 sold</strong></li>
-              <li className="list-item"><span>4. French Fries</span> <strong>290 sold</strong></li>
-              <li className="list-item"><span>5. Coca Cola</span> <strong>215 sold</strong></li>
+              <li className="list-item"><span>1. Burger Buns</span> <strong>50 sold</strong></li>
+              <li className="list-item"><span>2. Beef Patties</span> <strong>43 sold</strong></li>
+              <li className="list-item"><span>3. Cheddar Cheese</span> <strong>39 sold</strong></li>
+              <li className="list-item"><span>4. French Fries</span> <strong>29 sold</strong></li>
+              <li className="list-item"><span>5. Coca Cola</span> <strong>21 sold</strong></li>
             </ul>
           </div>
 
