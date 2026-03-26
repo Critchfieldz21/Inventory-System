@@ -27,6 +27,10 @@ function Sales() {
           <h1>Sales History</h1>
         </header>
         <div className="table-container">
+          <div className="table-controls">
+            <button className="action-btn add-btn" onClick={() => {}}>Add</button>
+            <button className="action-btn remove-btn" onClick={() => {}}>Remove</button>
+          </div>
           <table className="inventory-table">
             <thead>
               <tr>

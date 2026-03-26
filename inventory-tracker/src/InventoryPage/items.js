@@ -43,6 +43,8 @@ function Items() {
               className="search-bar"
               onChange={(e) => setSearchTerm(e.target.value)}
             />
+            <button className="action-btn add-btn" onClick={() => {}}>Add</button>
+            <button className="action-btn remove-btn" onClick={() => {}}>Remove</button>
           </div>
 
           <table className="inventory-table">

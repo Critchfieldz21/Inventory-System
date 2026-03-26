@@ -25,6 +25,10 @@ function Recipe() {
         <header className="content-header">
           <h1>Recipe Management</h1>
         </header>
+        <div className="table-controls">
+          <button className="action-btn add-btn" onClick={() => {}}>Add</button>
+          <button className="action-btn remove-btn" onClick={() => {}}>Remove</button>
+        </div>
         <div className="stats-grid" style={{gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))'}}>
           {recipes.map((r, i) => (
             <div key={i} className="status-card" style={{marginBottom: '20px'}}>

@@ -19,8 +19,8 @@ function LoginPage() {
 
   const handleForgotLogin = (e) => {
     e.preventDefault(); // Prevents form submission
-    // Logic for forgot login (e.g., navigate to reset page)
-    alert("Redirecting to account recovery...");
+    // Show pop-up with default credentials
+    alert("\nUsername: admin\nPassword: 123");
   };
 
   return (
