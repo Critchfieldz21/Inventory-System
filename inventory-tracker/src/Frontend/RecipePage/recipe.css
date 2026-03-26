@@ -82,10 +82,149 @@
   font-weight: 600;
 }
 
-/* --- Hover Effect for Rows --- */
-.inventory-table tr:hover td {
-  background-color: #f9fafb;
-  cursor: default;
+.remove-btn:hover {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+}
+
+/* Recipe Card Selection */
+.recipe-card.selected {
+  border: 2px solid #4f46e5;
+  background: #f0f4ff;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+/* Modal Styling */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  padding: 30px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  max-width: 500px;
+  width: 90%;
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.modal-content h2 {
+  margin: 0 0 20px 0;
+  color: #1f2937;
+  font-size: 22px;
+}
+
+.modal-content p {
+  color: #6b7280;
+  margin: 10px 0;
+}
+
+.sale-info {
+  background: #f3f4f6;
+  padding: 12px;
+  border-radius: 6px;
+  border-left: 4px solid #ef4444;
+  font-weight: 600;
+  color: #374151;
+}
+
+.form-group {
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #374151;
+  font-size: 14px;
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.modal-buttons {
+  display: flex;
+  gap: 12px;
+  margin-top: 25px;
+  justify-content: flex-end;
+}
+
+.btn-confirm,
+.btn-cancel {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+}
+
+.btn-confirm {
+  background: #10b981;
+  color: white;
+}
+
+.btn-confirm:hover {
+  background: #059669;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+}
+
+.btn-confirm.btn-danger {
+  background: #ef4444;
+}
+
+.btn-confirm.btn-danger:hover {
+  background: #dc2626;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+}
+
+.btn-cancel {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.btn-cancel:hover {
+  background: #d1d5db;
 }
 
 .table-controls {

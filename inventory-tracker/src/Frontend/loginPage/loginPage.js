@@ -13,7 +13,7 @@ function LoginPage() {
     if (username.trim() === "admin" && password === "123") {
       navigate('/home');
     } else {
-      alert("Invalid username or password!");
+      alert("Invalid username or password!\n\n Hint: check click forgot login!");
     }
   };
 

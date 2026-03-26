@@ -1,11 +1,11 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import LoginPage from './loginPage/loginPage';
-import HomePage from './HomePage/home';
-import Inventory from './InventoryPage/items';
-import Recipe from './RecipePage/recipe'
-import Sales from './SalesPage/sales'
+import LoginPage from './Frontend/loginPage/loginPage';
+import HomePage from './Frontend/HomePage/home';
+import Inventory from './Frontend/InventoryPage/items';
+import Recipe from './Frontend/RecipePage/recipe'
+import Sales from './Frontend/SalesPage/sales'
 
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
