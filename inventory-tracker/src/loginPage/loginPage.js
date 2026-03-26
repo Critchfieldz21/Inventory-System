@@ -20,7 +20,7 @@ function LoginPage() {
   const handleForgotLogin = (e) => {
     e.preventDefault(); // Prevents form submission
     // Show pop-up with default credentials
-    alert("\nUsername: admin\nPassword: 123");
+    alert("Don't forget next time!\n\nUsername: admin\nPassword: 123");
   };
 
   return (
