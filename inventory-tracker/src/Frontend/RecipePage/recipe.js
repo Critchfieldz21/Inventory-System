@@ -5,8 +5,6 @@ import './recipe.css';
 function Recipe() {
   const navigate = useNavigate();
   const [recipes, setRecipes] = useState([
-    { id: 1, name: 'Classic Burger', ingredients: '1 Bun, 1 Patty, 1 Cheese Slice' },
-    { id: 2, name: 'Garden Salad', ingredients: '2 Lettuce, 1 Tomato, 0.5 Onion' },
   ]);
 
   const [selectedRecipe, setSelectedRecipe] = useState(null);

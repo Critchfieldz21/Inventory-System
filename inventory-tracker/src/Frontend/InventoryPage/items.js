@@ -6,10 +6,6 @@ function Items() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [inventory, setInventory] = useState([
-    { id: 1, name: 'Burger Buns', category: 'Bakery', stock: 420, price: '$0.50' },
-    { id: 2, name: 'Beef Patties', category: 'Meat', stock: 385, price: '$2.10' },
-    { id: 3, name: 'Cheddar Cheese', category: 'Dairy', stock: 12, price: '$1.05' },
-    { id: 4, name: 'Onions', category: 'Produce', stock: 5, price: '$0.20' },
   ]);
 
   const [selectedRow, setSelectedRow] = useState(null);
