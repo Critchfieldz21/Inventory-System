@@ -1,0 +1,107 @@
+/* --- Global Variables --- */
+:root {
+  --primary-color: #4f46e5;
+  --bg-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+/* --- Layout Wrapper --- */
+.login-container {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-gradient);
+  font-family: 'Inter', sans-serif;
+}
+
+/* --- Card Styling --- */
+.login-box {
+  background: white;
+  padding: 40px;
+  border-radius: 16px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
+}
+
+/* --- Branding --- */
+.login-logo {
+  height: 300px;
+  width: 300px;
+  margin-bottom: 10px;
+}
+
+p {
+  color: #6b7280;
+  margin-bottom: 10px;
+  font-size: 14px;
+}
+
+/* --- Form Fields --- */
+.input-group {
+  text-align: left;
+  margin-bottom: 20px;
+}
+
+.input-group label {
+  display: block;
+  font-size: 18px;
+  font-weight: 500;
+  margin-bottom: 8px;
+  color: #374151;
+}
+
+input[type="text"], 
+input[type="password"] {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 16px;
+  box-sizing: border-box;
+}
+
+/* --- Interaction States --- */
+input:focus {
+  outline: 2px solid var(--primary-color);
+  border-color: transparent;
+}
+
+/* --- Action Button --- */
+.login-button {
+  width: 100%;
+  background: var(--primary-color);
+  color: white;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.login-button:hover {
+  background: #4338ca;
+}
+
+.login-footer{
+  margin-top: 20px;
+}
+
+.forgot-login-wrapper {
+  text-align: center;
+  margin-top: 15px;
+}
+
+.forgot-login-link {
+  font-size: 0.85rem;
+  color: #007bff;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.forgot-login-link:hover {
+  color: #0056b3;
+  text-decoration: underline;
+}
