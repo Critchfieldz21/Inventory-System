@@ -1,12 +1,25 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './items.css';
+
+const INVENTORY_STORAGE_KEY = 'inventory_items';
 
 function Items() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
-  const [inventory, setInventory] = useState([
-  ]);
+  const [inventory, setInventory] = useState(() => {
+    const savedInventory = localStorage.getItem(INVENTORY_STORAGE_KEY);
+
+    if (!savedInventory) {
+      return [];
+    }
+
+    try {
+      return JSON.parse(savedInventory);
+    } catch (error) {
+      return [];
+    }
+  });
 
   const [selectedRow, setSelectedRow] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -17,6 +30,10 @@ function Items() {
     stock: '',
     price: ''
   });
+
+  useEffect(() => {
+    localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(inventory));
+  }, [inventory]);
 
   const handleAddClick = () => {
     setFormData({ name: '', category: '', stock: '', price: '' });

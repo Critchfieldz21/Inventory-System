@@ -1,11 +1,24 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import './recipe.css';
 
+const RECIPE_STORAGE_KEY = 'inventory_recipes';
+/* Recipes are saved in the localStorage under this key so when you navigate between pages, the data persists */
 function Recipe() {
   const navigate = useNavigate();
-  const [recipes, setRecipes] = useState([
-  ]);
+  const [recipes, setRecipes] = useState(() => {
+    const savedRecipes = localStorage.getItem(RECIPE_STORAGE_KEY);
+
+    if (!savedRecipes) {
+      return [];
+    }
+
+    try {
+      return JSON.parse(savedRecipes);
+    } catch (error) {
+      return [];
+    }
+  });
 
   const [selectedRecipe, setSelectedRecipe] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -14,6 +27,10 @@ function Recipe() {
     name: '',
     ingredients: ''
   });
+
+  useEffect(() => {
+    localStorage.setItem(RECIPE_STORAGE_KEY, JSON.stringify(recipes));
+  }, [recipes]);
 
   const handleAddClick = () => {
     setFormData({ name: '', ingredients: '' });

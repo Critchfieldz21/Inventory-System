@@ -1,11 +1,24 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import './sales.css'; // You can reuse most of items.css logic
 
+const SALES_STORAGE_KEY = 'inventory_sales';
+/* Sales data is saved in the localStorage under this key so when you navigate between pages, the data persists */
 function Sales() {
   const navigate = useNavigate();
-  const [salesData, setSalesData] = useState([
-  ]);
+  const [salesData, setSalesData] = useState(() => {
+    const savedSales = localStorage.getItem(SALES_STORAGE_KEY);
+
+    if (!savedSales) {
+      return [];
+    }
+
+    try {
+      return JSON.parse(savedSales);
+    } catch (error) {
+      return [];
+    }
+  });
   
   const [selectedRow, setSelectedRow] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -15,6 +28,10 @@ function Sales() {
     total: '',
     status: 'Pending'
   });
+
+  useEffect(() => {
+    localStorage.setItem(SALES_STORAGE_KEY, JSON.stringify(salesData));
+  }, [salesData]);
 
   const handleAddClick = () => {
     setFormData({ item: '', total: '', status: 'Pending' });
