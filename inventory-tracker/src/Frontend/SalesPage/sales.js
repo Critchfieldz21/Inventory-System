@@ -5,6 +5,12 @@ import './sales.css'; // You can reuse most of items.css logic
 function Sales() {
   const navigate = useNavigate();
   const [salesData, setSalesData] = useState([
+    { id: 'TX001', item: 'Classic Burger', date: '04-06-2026', total: '$8.50', status: 'Completed' },
+    { id: 'TX002', item: 'Bacon Cheeseburger', date: '04-06-2026', total: '$10.25', status: 'Completed' },
+    { id: 'TX003', item: 'Chicken Burger', date: '04-06-2026', total: '$9.75', status: 'Completed' },
+    { id: 'TX004', item: 'Classic Burger x2', date: '04-06-2026', total: '$17.00', status: 'Pending' },
+    { id: 'TX005', item: 'Bacon Cheeseburger x2', date: '04-05-2026', total: '$20.50', status: 'Completed' },
+    { id: 'TX006', item: 'Chicken Burger', date: '04-05-2026', total: '$9.75', status: 'Completed' },
   ]);
   
   const [selectedRow, setSelectedRow] = useState(null);

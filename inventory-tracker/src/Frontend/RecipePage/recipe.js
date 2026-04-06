@@ -5,9 +5,25 @@ import './recipe.css';
 function Recipe() {
   const navigate = useNavigate();
   const [recipes, setRecipes] = useState([
+    {
+      id: 1,
+      name: 'Classic Burger',
+      ingredients: '1 Burger Bun, 1 Beef Patty, 1 Cheddar Cheese, Lettuce, Tomato, Ketchup'
+    },
+    {
+      id: 2,
+      name: 'Bacon Cheeseburger',
+      ingredients: '1 Burger Bun, 1 Beef Patty, 1 Bacon Strips, 1 Cheddar Cheese, Lettuce, Mayonnaise'
+    },
+    {
+      id: 3,
+      name: 'Chicken Burger',
+      ingredients: '1 Burger Bun, 1 Chicken Breast, 1 Cheddar Cheese, Lettuce, Tomato'
+    },
   ]);
 
   const [selectedRecipe, setSelectedRecipe] = useState(null);
+  const [selectedRecipes, setSelectedRecipes] = useState(new Set());
   const [showAddModal, setShowAddModal] = useState(false);
   const [showRemoveModal, setShowRemoveModal] = useState(false);
   const [formData, setFormData] = useState({
@@ -21,11 +37,21 @@ function Recipe() {
   };
 
   const handleRemoveClick = () => {
-    if (selectedRecipe !== null) {
+    if (selectedRecipes.size > 0) {
       setShowRemoveModal(true);
     } else {
-      alert('Please select a recipe to remove');
+      alert('Please select at least one recipe to remove');
     }
+  };
+
+  const handleCheckboxChange = (recipeId) => {
+    const newSelected = new Set(selectedRecipes);
+    if (newSelected.has(recipeId)) {
+      newSelected.delete(recipeId);
+    } else {
+      newSelected.add(recipeId);
+    }
+    setSelectedRecipes(newSelected);
   };
 
   const handleConfirmAdd = () => {
@@ -41,8 +67,9 @@ function Recipe() {
   };
 
   const handleConfirmRemove = () => {
-    setRecipes(recipes.filter(r => r.id !== selectedRecipe.id));
+    setRecipes(recipes.filter(r => !selectedRecipes.has(r.id)));
     setShowRemoveModal(false);
+    setSelectedRecipes(new Set());
     setSelectedRecipe(null);
   };
 
@@ -71,12 +98,22 @@ function Recipe() {
           {recipes.map((r) => (
             <div 
               key={r.id} 
-              className={`status-card recipe-card ${selectedRecipe?.id === r.id ? 'selected' : ''}`}
-              onClick={() => setSelectedRecipe(r)}
-              style={{marginBottom: '20px', cursor: 'pointer'}}
+              className={`status-card recipe-card ${selectedRecipes.has(r.id) ? 'selected' : ''}`}
+              style={{marginBottom: '20px', cursor: 'pointer', position: 'relative'}}
             >
-              <h3>{r.name}</h3>
-              <p style={{marginTop: '10px', fontSize: '14px'}}>{r.ingredients}</p>
+              <input 
+                type="checkbox" 
+                checked={selectedRecipes.has(r.id)}
+                onChange={(e) => {
+                  e.stopPropagation();
+                  handleCheckboxChange(r.id);
+                }}
+                className="recipe-checkbox"
+              />
+              <div onClick={() => setSelectedRecipe(r)}>
+                <h3>{r.name}</h3>
+                <p style={{marginTop: '10px', fontSize: '14px'}}>{r.ingredients}</p>
+              </div>
             </div>
           ))}
         </div>
@@ -117,10 +154,16 @@ function Recipe() {
           <div className="modal-overlay" onClick={() => setShowRemoveModal(false)}>
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
               <h2>Confirm Removal</h2>
-              <p>Are you sure you want to remove this recipe?</p>
-              <p className="sale-info">Recipe: {selectedRecipe?.name}</p>
+              <p>Are you sure you want to remove {selectedRecipes.size} recipe(ies)?</p>
+              <div className="items-to-remove">
+                {recipes.filter(r => selectedRecipes.has(r.id)).map((r) => (
+                  <div key={r.id} className="item-to-remove">
+                    • {r.name}
+                  </div>
+                ))}
+              </div>
               <div className="modal-buttons">
-                <button className="btn-confirm btn-danger" onClick={handleConfirmRemove}>Remove</button>
+                <button className="btn-confirm btn-danger" onClick={handleConfirmRemove}>Remove {selectedRecipes.size} Recipe(ies)</button>
                 <button className="btn-cancel" onClick={() => setShowRemoveModal(false)}>Cancel</button>
               </div>
             </div>
