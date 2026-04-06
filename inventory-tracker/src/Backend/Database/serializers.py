@@ -25,28 +25,30 @@ class RecipeSerializer(serializers.ModelSerializer):
         read_only_fields = ['created_at', 'updated_at']
 
     def get_ingredients_display(self, obj):
-        """Convert ingredient item IDs to item names with quantities"""
+        """Return ingredients in a readable format"""
         try:
             if not obj.ingredients:
                 return ""
             
-            ingredients = json.loads(obj.ingredients)
-            if not isinstance(ingredients, list):
-                return obj.ingredients
-                
-            display_items = []
-            for ing in ingredients:
-                try:
-                    item = Item.objects.get(id=ing.get('item'))
-                    quantity = ing.get('quantity', 1)
-                    display_items.append(f"{quantity} x {item.name}")
-                except (Item.DoesNotExist, KeyError, TypeError) as e:
-                    # Skip items that don't exist
-                    continue
+            # Try parsing as JSON first
+            try:
+                ingredients = json.loads(obj.ingredients)
+                if isinstance(ingredients, list):
+                    display_items = []
+                    for ing in ingredients:
+                        try:
+                            item = Item.objects.get(id=ing.get('item'))
+                            quantity = ing.get('quantity', 1)
+                            display_items.append(f"{quantity} x {item.name}")
+                        except (Item.DoesNotExist, KeyError, TypeError):
+                            continue
+                    return ", ".join(display_items) if display_items else obj.ingredients
+            except (json.JSONDecodeError, ValueError, TypeError):
+                pass
             
-            return ", ".join(display_items) if display_items else obj.ingredients
-        except (json.JSONDecodeError, ValueError, TypeError) as e:
-            # If JSON parsing fails, return raw text
+            # If not JSON, it's already in text format - just return it
+            return obj.ingredients
+        except Exception as e:
             return obj.ingredients if obj.ingredients else ""
 
 
