@@ -37,6 +37,18 @@ function Home() {
           <h1>Dashboard Overview</h1>
         </header>
 
+        {/* --- Financial Summary Section --- */}
+        <div className="financial-summary">
+          <div className="financial-card profit">
+            <h4 className="financial-label">Total Profits</h4>
+            <p className="financial-amount">$24,550</p>
+          </div>
+          <div className="financial-card expenses">
+            <h4 className="financial-label">Total Expenses</h4>
+            <p className="financial-amount">$8,920</p>
+          </div>
+        </div>
+
         {/* --- Top Section: Trend Graph --- */}
         <div className="chart-container">
           <h3 className="card-title">Weekly Profits </h3>

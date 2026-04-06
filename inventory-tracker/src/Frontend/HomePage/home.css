@@ -100,6 +100,55 @@
   color: var(--text-muted);
 }
 
+/* --- Financial Summary Section --- */
+.financial-summary {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 30px;
+}
+
+.financial-card {
+  flex: 1;
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--border-color);
+  background: white;
+}
+
+.financial-card.profit {
+  
+
+}
+
+.financial-card.expenses {
+ 
+
+}
+
+.financial-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin: 0 0 12px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.financial-amount {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.financial-card.profit .financial-amount {
+  color: #1ba827;
+}
+
+.financial-card.expenses .financial-amount {
+  color: #b71616;
+}
+
 /* --- Chart Section --- */
 .chart-container {
   background: white;
