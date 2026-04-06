@@ -111,6 +111,17 @@
   background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
 }
 
+.edit-btn {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  padding: 8px 16px;
+  font-size: 13px;
+}
+
+.edit-btn:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+}
+
 /* Row Selection Styling */
 .selected-row {
   background-color: #f0f4ff !important;

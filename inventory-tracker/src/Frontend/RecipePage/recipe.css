@@ -324,3 +324,93 @@
   border-bottom: none;
 }
 
+/* --- Ingredient Selector --- */
+.ingredient-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.ingredient-btn {
+  padding: 8px 12px;
+  border: 2px solid #e5e7eb;
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+  transition: all 0.2s ease;
+}
+
+.ingredient-btn:hover:not(:disabled) {
+  border-color: #4f46e5;
+  background: #f3f4f6;
+  color: #4f46e5;
+}
+
+.ingredient-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
+
+/* --- Ingredients List --- */
+.ingredients-list {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 12px;
+  margin-top: 8px;
+}
+
+.ingredient-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.ingredient-row:last-child {
+  border-bottom: none;
+}
+
+.ingredient-quantity {
+  width: 50px;
+  padding: 6px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 13px;
+  text-align: center;
+}
+
+.ingredient-quantity:focus {
+  outline: none;
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.ingredient-name {
+  flex: 1;
+  font-size: 14px;
+  color: #374151;
+}
+
+.btn-remove-ingredient {
+  padding: 4px 8px;
+  border: none;
+  background: #fee2e2;
+  color: #b91c1c;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.btn-remove-ingredient:hover {
+  background: #fecaca;
+}

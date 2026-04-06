@@ -117,13 +117,18 @@
 }
 
 .financial-card.profit {
-  
+  border-left: 4px solid #1ba827;
+  background: linear-gradient(135deg, rgba(27, 168, 39, 0.05) 0%, rgba(27, 168, 39, 0.02) 100%);
+}
 
+.financial-card.revenue {
+  border-left: 4px solid #4f46e5;
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.05) 0%, rgba(79, 70, 229, 0.02) 100%);
 }
 
 .financial-card.expenses {
- 
-
+  border-left: 4px solid #b71616;
+  background: linear-gradient(135deg, rgba(183, 22, 22, 0.05) 0%, rgba(183, 22, 22, 0.02) 100%);
 }
 
 .financial-label {
@@ -137,12 +142,16 @@
 
 .financial-amount {
   font-size: 28px;
-  font-weight: 700;
+  font-weight: 900;
   margin: 0;
 }
 
 .financial-card.profit .financial-amount {
   color: #1ba827;
+}
+
+.financial-card.revenue .financial-amount {
+  color: #4f46e5;
 }
 
 .financial-card.expenses .financial-amount {
