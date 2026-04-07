@@ -5,170 +5,432 @@ import './sales.css';
 
 function Sales() {
   const navigate = useNavigate();
-  const [data, setData] = useState({ salesData: [], items: [], recipes: [] });
-  const [ui, setUi] = useState({
-    loading: true, error: null, selectedRows: new Set(),
-    showAddModal: false, showRemoveModal: false, showEditModal: false, editingSaleId: null, saleType: 'item'
-  });
-  const [formData, setFormData] = useState({ item: '', quantity: '', total: '', status: 'Completed' });
+  const [salesData, setSalesData] = useState([]);
+  const [items, setItems] = useState([]);
+  const [recipes, setRecipes] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  
+  const [selectedRows, setSelectedRows] = useState(new Set());
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showRemoveModal, setShowRemoveModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingSaleId, setEditingSaleId] = useState(null);
+  const [saleType, setSaleType] = useState('item'); // 'item' or 'recipe'
   const [selectedRecipeIngredients, setSelectedRecipeIngredients] = useState([]);
+  const [formData, setFormData] = useState({
+    item: '',
+    quantity: '',
+    total: '',
+    status: 'Completed'
+  });
 
   // Fetch sales, items, and recipes from backend
   useEffect(() => {
-    (async () => {
+    const fetchData = async () => {
       try {
+        setLoading(true);
         const [salesDataBackend, itemsData, recipesData] = await Promise.all([
-          transactionsAPI.getSales(), itemsAPI.getAll(), recipesAPI.getAll()
+          transactionsAPI.getSales(),
+          itemsAPI.getAll(),
+          recipesAPI.getAll()
         ]);
+        
+        // Handle both paginated (object with results) and direct array responses
         const salesArray = Array.isArray(salesDataBackend) ? salesDataBackend : (salesDataBackend.results || []);
         const itemsArray = Array.isArray(itemsData) ? itemsData : (itemsData.results || []);
         const recipesArray = Array.isArray(recipesData) ? recipesData : (recipesData.results || []);
-        setData({ salesData: salesArray, items: itemsArray, recipes: recipesArray });
+        
+        setSalesData(salesArray);
+        setItems(itemsArray);
+        setRecipes(recipesArray);
+        setError(null);
       } catch (err) {
-        console.error('Error:', err);
-        setUi(prev => ({ ...prev, error: 'Failed to load sales data' }));
+        console.error('Error fetching data:', err);
+        setError('Failed to load sales data');
       } finally {
-        setUi(prev => ({ ...prev, loading: false }));
+        setLoading(false);
       }
-    })();
-  }, []);
+    };
 
-  const setUiState = (updates) => setUi(prev => ({ ...prev, ...updates }));
+    fetchData();
+  }, []);
 
   const handleAddClick = () => {
     setFormData({ item: '', quantity: '', total: '', status: 'Completed' });
-    setUiState({ showAddModal: true, saleType: 'item' });
+    setSaleType('item');
     setSelectedRecipeIngredients([]);
+    setShowAddModal(true);
   };
 
   const handleRemoveClick = () => {
-    if (ui.selectedRows.size === 0) return alert('Select a sale to remove');
-    setUiState({ showRemoveModal: true });
+    if (selectedRows.size > 0) {
+      setShowRemoveModal(true);
+    } else {
+      alert('Please select a sale to remove');
+    }
   };
 
   const handleEditClick = () => {
-    if (ui.selectedRows.size === 0) return alert('Select a sale to edit');
-    if (ui.selectedRows.size > 1) return alert('Select only one sale to edit');
-    const selectedIndex = Array.from(ui.selectedRows)[0];
-    const sale = data.salesData[selectedIndex];
-    setFormData({ item: sale.item, quantity: sale.quantity, total: sale.total, status: sale.status });
-    setUiState({ showEditModal: true, editingSaleId: sale.id });
+    if (selectedRows.size === 0) {
+      alert('Please select a sale to edit');
+      return;
+    }
+    
+    if (selectedRows.size > 1) {
+      alert('Please select only one sale to edit');
+      return;
+    }
+    
+    const selectedIndex = Array.from(selectedRows)[0];
+    const sale = salesData[selectedIndex];
+    setEditingSaleId(sale.id);
+    setFormData({
+      item: sale.item,
+      quantity: sale.quantity,
+      total: sale.total,
+      status: sale.status
+    });
+    setShowEditModal(true);
   };
 
   const handleCheckboxChange = (index) => {
-    const newSelected = new Set(ui.selectedRows);
-    newSelected.has(index) ? newSelected.delete(index) : newSelected.add(index);
-    setUiState({ selectedRows: newSelected });
+    const newSelected = new Set(selectedRows);
+    if (newSelected.has(index)) {
+      newSelected.delete(index);
+    } else {
+      newSelected.add(index);
+    }
+    setSelectedRows(newSelected);
   };
 
   const handleSelectAll = () => {
-    setUiState({
-      selectedRows: ui.selectedRows.size === data.salesData.length ? new Set() : new Set(data.salesData.map((_, i) => i))
-    });
+    if (selectedRows.size === salesData.length) {
+      setSelectedRows(new Set());
+    } else {
+      const allIndices = new Set(salesData.map((_, index) => index));
+      setSelectedRows(allIndices);
+    }
   };
 
   const parseRecipeIngredients = (ingredientString) => {
     if (!ingredientString) return [];
+    
+    // Try parsing as JSON first (format with item IDs)
     if (typeof ingredientString === 'string' && ingredientString.startsWith('[')) {
       try {
         const parsed = JSON.parse(ingredientString);
-        return Array.isArray(parsed) ? parsed.map(ing => ({ name: data.items.find(item => item.id === (ing.item || ing.id))?.name || `Item ${ing.item || ing.id}`, quantity: parseInt(ing.quantity) || 1 })) : [];
-      } catch (e) {}
+        if (Array.isArray(parsed)) {
+          // JSON format: [{"item": 2, "quantity": 1}, ...]
+          // Need to look up item names by ID
+          return parsed.map(ing => {
+            const itemId = ing.item || ing.id;
+            const itemObj = items.find(item => item.id === itemId);
+            return {
+              name: itemObj ? itemObj.name : `Item ${itemId}`,
+              quantity: parseInt(ing.quantity) || 1,
+              item_id: itemId
+            };
+          });
+        }
+      } catch (e) {
+        // JSON parse failed, continue to try text format
+        console.log('JSON parse failed, trying text format:', e);
+      }
     }
+    
+    // Fall back to text format parsing (e.g., "2 flour, 1 sugar")
     if (typeof ingredientString === 'string') {
-      return ingredientString.split(',').map(ing => {
-        const match = ing.trim().match(/^(\d+)\s*x?\s*(.+)$/i);
-        return { quantity: match ? parseInt(match[1]) || 1 : 1, name: match ? match[2].trim() : ing.trim() };
+      const parsed = ingredientString.split(',').map(ing => {
+        const trimmed = ing.trim();
+        // Try to match pattern: number(s) + optional 'x' + ingredient name
+        const match = trimmed.match(/^(\d+)\s*x?\s*(.+)$/i);
+        if (match) {
+          return {
+            quantity: parseInt(match[1]) || 1,
+            name: match[2].trim()
+          };
+        }
+        // Fallback if no number found
+        return {
+          quantity: 1,
+          name: trimmed
+        };
       }).filter(ing => ing.name.length > 0);
+      
+      return parsed;
     }
+    
     return [];
+  };
+
+  const handleConfirmEdit = async () => {
+    if (!formData.item || !formData.quantity) {
+      alert('Please select an item and enter a quantity');
+      return;
+    }
+
+    try {
+      const updatedSale = await transactionsAPI.update(editingSaleId, {
+        item: parseInt(formData.item),
+        quantity: parseInt(formData.quantity),
+        total: parseFloat(formData.total),
+        status: formData.status
+      });
+
+      const updatedSales = salesData.map(sale =>
+        sale.id === editingSaleId ? updatedSale : sale
+      );
+      
+      setSalesData(updatedSales);
+      setShowEditModal(false);
+      setEditingSaleId(null);
+      setFormData({ item: '', quantity: '', total: '', status: 'Completed' });
+    } catch (err) {
+      console.error('Error updating sale:', err);
+      alert('Failed to update sale');
+    }
+  };
+
+  const handleConfirmAdd = async () => {
+    // Validation based on sale type
+    if (saleType === 'item') {
+      if (!formData.item || !formData.quantity) {
+        alert('Please select an item and enter a quantity');
+        return;
+      }
+      
+      // Check if quantity exceeds available stock
+      const selectedItem = items.find(item => item.id === parseInt(formData.item));
+      if (!selectedItem) {
+        alert('Selected item not found');
+        return;
+      }
+      
+      const quantityToSell = parseInt(formData.quantity);
+      if (quantityToSell > selectedItem.stock) {
+        alert(`Insufficient stock! Available: ${selectedItem.stock}, Requested: ${quantityToSell}`);
+        return;
+      }
+      
+      // If total isn't set, calculate it
+      let finalTotal = formData.total;
+      if (!finalTotal) {
+        finalTotal = (parseFloat(selectedItem.price) * quantityToSell).toFixed(2);
+      }
+
+      try {
+        const newSale = await transactionsAPI.create({
+          item: parseInt(formData.item),
+          quantity: quantityToSell,
+          total: parseFloat(finalTotal),
+          status: formData.status
+        });
+        setSalesData([...salesData, newSale]);
+        setShowAddModal(false);
+        setFormData({ item: '', quantity: '', total: '', status: 'Completed' });
+        
+        // Refresh items to get updated stock
+        const updatedItems = await itemsAPI.getAll();
+        const itemsArray = Array.isArray(updatedItems) ? updatedItems : (updatedItems.results || []);
+        setItems(itemsArray);
+      } catch (err) {
+        console.error('Error adding sale:', err);
+        alert('Failed to add sale: ' + (err.message || 'Unknown error'));
+      }
+    } else {
+      // Recipe-based sale
+      if (!formData.item || !formData.quantity) {
+        alert('Please select a recipe and enter a quantity');
+        return;
+      }
+
+      const recipeQuantity = parseInt(formData.quantity);
+      if (recipeQuantity <= 0) {
+        alert('Quantity must be greater than 0');
+        return;
+      }
+
+      try {
+        // Check if all ingredients have sufficient stock
+        const ingredientsList = parseRecipeIngredients(selectedRecipeIngredients);
+        for (const ingredient of ingredientsList) {
+          const ingredientItem = items.find(item => 
+            item.name.toLowerCase() === ingredient.name.toLowerCase()
+          );
+          if (!ingredientItem) {
+            alert(`Ingredient "${ingredient.name}" not found in inventory`);
+            return;
+          }
+          const requiredQuantity = ingredient.quantity * recipeQuantity;
+          if (requiredQuantity > ingredientItem.stock) {
+            alert(`Insufficient stock for "${ingredient.name}"! Available: ${ingredientItem.stock}, Required: ${requiredQuantity}`);
+            return;
+          }
+        }
+
+        // Get the selected recipe name
+        const selectedRecipe = recipes.find(r => r.id === parseInt(formData.item));
+        if (!selectedRecipe) {
+          alert('Selected recipe not found');
+          return;
+        }
+
+        // Calculate total based on ingredients and quantity
+        const finalTotal = calculateRecipeTotal(recipeQuantity);
+
+        // Create sales entry for the recipe (using a placeholder or the first ingredient's item ID)
+        const recipeItem = items.find(item => item.name.toLowerCase() === selectedRecipe.name.toLowerCase());
+        const itemIdToUse = recipeItem ? recipeItem.id : items[0]?.id;
+
+        if (!itemIdToUse) {
+          alert('Unable to create recipe sale: no items available');
+          return;
+        }
+
+        const newSale = await transactionsAPI.create({
+          item: itemIdToUse,
+          item_name: selectedRecipe.name, // Add recipe name as item_name
+          quantity: recipeQuantity,
+          total: parseFloat(finalTotal),
+          status: formData.status
+        });
+
+        // Deduct all ingredients from inventory (multiplied by recipe quantity)
+        for (const ingredient of ingredientsList) {
+          const ingredientItem = items.find(item => 
+            item.name.toLowerCase() === ingredient.name.toLowerCase()
+          );
+          if (ingredientItem) {
+            await itemsAPI.update(ingredientItem.id, {
+              ...ingredientItem,
+              stock: ingredientItem.stock - (ingredient.quantity * recipeQuantity)
+            });
+          }
+        }
+
+        setSalesData([...salesData, newSale]);
+        setShowAddModal(false);
+        setFormData({ item: '', quantity: '', total: '', status: 'Completed' });
+        setSelectedRecipeIngredients([]);
+        setSaleType('item');
+        
+        // Refresh items to get updated stock
+        const updatedItems = await itemsAPI.getAll();
+        const itemsArray = Array.isArray(updatedItems) ? updatedItems : (updatedItems.results || []);
+        setItems(itemsArray);
+      } catch (err) {
+        console.error('Error adding recipe sale:', err);
+        alert('Failed to add recipe sale: ' + (err.message || 'Unknown error'));
+      }
+    }
   };
 
   const calculateRecipeTotal = (quantity = 1) => {
     const ingredientsList = parseRecipeIngredients(selectedRecipeIngredients);
-    return (ingredientsList.reduce((total, ing) => {
-      const item = data.items.find(i => i.name.toLowerCase() === ing.name.toLowerCase());
-      return total + (item ? item.price * ing.quantity : 0);
-    }, 0) * quantity).toFixed(2);
+    let total = 0;
+    for (const ingredient of ingredientsList) {
+      const ingredientItem = items.find(item => 
+        item.name.toLowerCase() === ingredient.name.toLowerCase()
+      );
+      if (ingredientItem) {
+        total += ingredientItem.price * ingredient.quantity;
+      }
+    }
+    return (total * quantity).toFixed(2);
   };
 
   const handleRecipeChange = (recipeId) => {
-    const selectedRecipe = data.recipes.find(r => r.id === parseInt(recipeId));
-    if (!selectedRecipe) return;
-    const ingredientsData = selectedRecipe.ingredients || '';
-    setSelectedRecipeIngredients(ingredientsData);
-    setFormData({ item: recipeId, quantity: 1, total: calculateRecipeTotal(1), status: 'Completed' });
+    const selectedRecipe = recipes.find(r => r.id === parseInt(recipeId));
+    if (selectedRecipe) {
+      // Use ingredients field (which is JSON format for recipes)
+      const ingredientsData = selectedRecipe.ingredients || '';
+      setSelectedRecipeIngredients(ingredientsData);
+      
+      // Calculate total from recipe ingredients (default quantity 1)
+      const ingredientsList = parseRecipeIngredients(ingredientsData);
+      
+      let total = 0;
+      for (const ingredient of ingredientsList) {
+        const ingredientItem = items.find(item => 
+          item.name.toLowerCase() === ingredient.name.toLowerCase()
+        );
+        if (ingredientItem) {
+          total += ingredientItem.price * ingredient.quantity;
+        }
+      }
+      setFormData({
+        item: recipeId,
+        quantity: 1,
+        total: total.toFixed(2),
+        status: 'Completed'
+      });
+    }
   };
 
   const handleConfirmRemove = async () => {
     try {
-      const ids = Array.from(ui.selectedRows).map(i => data.salesData[i].id);
-      await Promise.all(ids.map(id => transactionsAPI.delete(id)));
-      setData(prev => ({ ...prev, salesData: prev.salesData.filter((_, i) => !ui.selectedRows.has(i)) }));
-      setUiState({ showRemoveModal: false, selectedRows: new Set() });
+      const salesToDelete = [];
+      selectedRows.forEach(index => {
+        salesToDelete.push(salesData[index].id);
+      });
+      
+      await Promise.all(salesToDelete.map(id => transactionsAPI.delete(id)));
+      
+      setSalesData(salesData.filter((_, index) => !selectedRows.has(index)));
+      setShowRemoveModal(false);
+      setSelectedRows(new Set());
     } catch (err) {
+      console.error('Error removing sales:', err);
       alert('Failed to remove sales');
     }
   };
 
   const handleStatusChange = async (index, newStatus) => {
     try {
-      const saleToUpdate = data.salesData[index];
-      await transactionsAPI.update(saleToUpdate.id, { ...saleToUpdate, status: newStatus });
-      const updatedSales = [...data.salesData];
+      const saleToUpdate = salesData[index];
+      await transactionsAPI.update(saleToUpdate.id, {
+        ...saleToUpdate,
+        status: newStatus
+      });
+      const updatedSales = [...salesData];
       updatedSales[index].status = newStatus;
-      setData(prev => ({ ...prev, salesData: updatedSales }));
+      setSalesData(updatedSales);
     } catch (err) {
+      console.error('Error updating sale status:', err);
       alert('Failed to update sale status');
     }
   };
 
   const handleFormChange = (e) => {
     const { name, value } = e.target;
-    const updatedFormData = { ...formData, [name]: value };
+    const updatedFormData = {
+      ...formData,
+      [name]: value
+    };
     
-    if (ui.saleType === 'item') {
-      if ((name === 'item' || name === 'quantity') && updatedFormData.item && updatedFormData.quantity) {
-        const selectedItem = data.items.find(item => item.id === parseInt(updatedFormData.item));
-        if (selectedItem) {
-          const itemPrice = parseFloat(selectedItem.price);
-          const quantity = parseInt(updatedFormData.quantity) || 0;
-          updatedFormData.total = (itemPrice * quantity).toFixed(2);
+    // Auto-calculate total when item or quantity changes
+    if (saleType === 'item') {
+      if (name === 'item' || name === 'quantity') {
+        if (updatedFormData.item && updatedFormData.quantity) {
+          const selectedItem = items.find(item => item.id === parseInt(updatedFormData.item));
+          if (selectedItem) {
+            const itemPrice = parseFloat(selectedItem.price);
+            const quantity = parseInt(updatedFormData.quantity) || 0;
+            const calculatedTotal = (itemPrice * quantity).toFixed(2);
+            updatedFormData.total = calculatedTotal;
+          }
         }
       }
-    } else if (name === 'quantity') {
-      const quantity = parseInt(value) || 1;
-      updatedFormData.total = calculateRecipeTotal(quantity);
+    } else {
+      // For recipes, recalculate total when quantity changes
+      if (name === 'quantity') {
+        const quantity = parseInt(value) || 1;
+        updatedFormData.total = calculateRecipeTotal(quantity);
+      }
     }
     
     setFormData(updatedFormData);
-  };
-
-  const handleConfirmAdd = async () => {
-    if (!formData.item || !formData.quantity || !formData.total) return alert('Please fill in all fields');
-    try {
-      const newSale = { item: parseInt(formData.item), quantity: parseInt(formData.quantity), total: parseFloat(formData.total), status: formData.status };
-      const createdSale = await transactionsAPI.create(newSale);
-      setData(prev => ({ ...prev, salesData: [...prev.salesData, createdSale] }));
-      setUiState({ showAddModal: false, saleType: 'item' });
-      setFormData({ item: '', quantity: '', total: '', status: 'Completed' });
-    } catch (err) {
-      alert('Failed to add sale');
-    }
-  };
-
-  const handleConfirmEdit = async () => {
-    if (!formData.item || !formData.quantity || !formData.total) return alert('Please fill in all fields');
-    try {
-      const updateData = { item: parseInt(formData.item), quantity: parseInt(formData.quantity), total: parseFloat(formData.total), status: formData.status };
-      await transactionsAPI.update(ui.editingSaleId, updateData);
-      const updatedSales = data.salesData.map(sale => sale.id === ui.editingSaleId ? { ...sale, ...updateData } : sale);
-      setData(prev => ({ ...prev, salesData: updatedSales }));
-      setUiState({ showEditModal: false, editingSaleId: null });
-      setFormData({ item: '', quantity: '', total: '', status: 'Completed' });
-    } catch (err) {
-      alert('Failed to update sale');
-    }
   };
 
   return (
@@ -189,10 +451,10 @@ function Sales() {
           <h1>Sales History</h1>
         </header>
         <div className="table-container">
-          {ui.loading ? (
+          {loading ? (
             <div className="loading-message">Loading sales data...</div>
-          ) : ui.error ? (
-            <div className="error-message">{ui.error}</div>
+          ) : error ? (
+            <div className="error-message">{error}</div>
           ) : (
             <>
               <div className="table-controls">
@@ -206,7 +468,7 @@ function Sales() {
                     <th>
                       <input 
                         type="checkbox" 
-                        checked={ui.selectedRows.size === data.salesData.length && data.salesData.length > 0}
+                        checked={selectedRows.size === salesData.length && salesData.length > 0}
                         onChange={handleSelectAll}
                         className="checkbox-header"
                       />
@@ -220,15 +482,15 @@ function Sales() {
                   </tr>
                 </thead>
                 <tbody>
-                  {data.salesData.map((sale, index) => (
+                  {salesData.map((sale, index) => (
                     <tr 
                       key={sale.id}
-                      className={ui.selectedRows.has(index) ? 'selected-row' : ''}
+                      className={selectedRows.has(index) ? 'selected-row' : ''}
                     >
                       <td>
                         <input 
                           type="checkbox" 
-                          checked={ui.selectedRows.has(index)}
+                          checked={selectedRows.has(index)}
                           onChange={() => handleCheckboxChange(index)}
                           className="checkbox-item"
                         />
@@ -260,17 +522,17 @@ function Sales() {
         </div>
 
         {/* Add Sale Modal */}
-        {ui.showAddModal && (
-          <div className="modal-overlay" onClick={() => setUiState({ showAddModal: false })}>
+        {showAddModal && (
+          <div className="modal-overlay" onClick={() => setShowAddModal(false)}>
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
               <h2>Add New Sale</h2>
               <div className="form-group">
                 <label>Sale Type</label>
                 <div className="sale-type-toggle">
                   <button 
-                    className={`toggle-btn ${ui.saleType === 'item' ? 'active' : ''}`}
+                    className={`toggle-btn ${saleType === 'item' ? 'active' : ''}`}
                     onClick={() => {
-                      setUiState({ saleType: 'item' });
+                      setSaleType('item');
                       setFormData({ item: '', quantity: '', total: '', status: 'Completed' });
                       setSelectedRecipeIngredients([]);
                     }}
@@ -278,9 +540,9 @@ function Sales() {
                     Item
                   </button>
                   <button 
-                    className={`toggle-btn ${ui.saleType === 'recipe' ? 'active' : ''}`}
+                    className={`toggle-btn ${saleType === 'recipe' ? 'active' : ''}`}
                     onClick={() => {
-                      setUiState({ saleType: 'recipe' });
+                      setSaleType('recipe');
                       setFormData({ item: '', quantity: '', total: '', status: 'Completed' });
                       setSelectedRecipeIngredients([]);
                     }}
@@ -290,7 +552,7 @@ function Sales() {
                 </div>
               </div>
 
-              {ui.saleType === 'item' ? (
+              {saleType === 'item' ? (
                 <>
                   <div className="form-group">
                     <label>Item</label>
@@ -300,7 +562,7 @@ function Sales() {
                       onChange={handleFormChange}
                     >
                       <option value="">Select an item</option>
-                      {data.items.map((item) => (
+                      {items.map((item) => (
                         <option key={item.id} value={item.id}>
                           {item.name} (Stock: {item.stock})
                         </option>
@@ -328,7 +590,7 @@ function Sales() {
                       onChange={(e) => handleRecipeChange(e.target.value)}
                     >
                       <option value="">Select a recipe</option>
-                      {data.recipes.map((recipe) => (
+                      {recipes.map((recipe) => (
                         <option key={recipe.id} value={recipe.id}>
                           {recipe.name}
                         </option>
@@ -357,7 +619,8 @@ function Sales() {
                             return <div className="no-ingredients">No ingredients added to this recipe</div>;
                           }
                           return ingredientsList.map((ing, index) => {
-                            const ingredientItem = data.items.find(item => 
+                            // Case-insensitive ingredient matching
+                            const ingredientItem = items.find(item => 
                               item.name.toLowerCase() === ing.name.toLowerCase()
                             );
                             const requiredQty = ing.quantity * (parseInt(formData.quantity) || 1);
@@ -405,36 +668,36 @@ function Sales() {
               </div>
               <div className="modal-buttons">
                 <button className="btn-confirm" onClick={handleConfirmAdd}>Add Sale</button>
-                <button className="btn-cancel" onClick={() => setUiState({ showAddModal: false })}>Cancel</button>
+                <button className="btn-cancel" onClick={() => setShowAddModal(false)}>Cancel</button>
               </div>
             </div>
           </div>
         )}
 
         {/* Remove Sale Modal */}
-        {ui.showRemoveModal && (
-          <div className="modal-overlay" onClick={() => setUiState({ showRemoveModal: false })}>
+        {showRemoveModal && (
+          <div className="modal-overlay" onClick={() => setShowRemoveModal(false)}>
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
               <h2>Confirm Removal</h2>
-              <p>Are you sure you want to remove {ui.selectedRows.size} sale(s)?</p>
+              <p>Are you sure you want to remove {selectedRows.size} sale(s)?</p>
               <div className="items-to-remove">
-                {Array.from(ui.selectedRows).map((index) => (
-                  <div key={data.salesData[index]?.id} className="item-to-remove">
-                    • Order ID: {data.salesData[index]?.id} - {data.salesData[index]?.item_name || data.salesData[index]?.item}
+                {Array.from(selectedRows).map((index) => (
+                  <div key={salesData[index]?.id} className="item-to-remove">
+                    • Order ID: {salesData[index]?.id} - {salesData[index]?.item_name || salesData[index]?.item}
                   </div>
                 ))}
               </div>
               <div className="modal-buttons">
-                <button className="btn-confirm btn-danger" onClick={handleConfirmRemove}>Remove {ui.selectedRows.size} Sale(s)</button>
-                <button className="btn-cancel" onClick={() => setUiState({ showRemoveModal: false })}>Cancel</button>
+                <button className="btn-confirm btn-danger" onClick={handleConfirmRemove}>Remove {selectedRows.size} Sale(s)</button>
+                <button className="btn-cancel" onClick={() => setShowRemoveModal(false)}>Cancel</button>
               </div>
             </div>
           </div>
         )}
 
         {/* Edit Sale Modal */}
-        {ui.showEditModal && (
-          <div className="modal-overlay" onClick={() => setUiState({ showEditModal: false })}>
+        {showEditModal && (
+          <div className="modal-overlay" onClick={() => setShowEditModal(false)}>
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
               <h2>Edit Sale</h2>
               <div className="form-group">
@@ -445,7 +708,7 @@ function Sales() {
                   onChange={handleFormChange}
                 >
                   <option value="">Select an item</option>
-                  {data.items.map((item) => (
+                  {items.map((item) => (
                     <option key={item.id} value={item.id}>
                       {item.name}
                     </option>
@@ -488,7 +751,7 @@ function Sales() {
               </div>
               <div className="modal-buttons">
                 <button className="btn-confirm" onClick={handleConfirmEdit}>Update Sale</button>
-                <button className="btn-cancel" onClick={() => setUiState({ showEditModal: false })}>Cancel</button>
+                <button className="btn-cancel" onClick={() => setShowEditModal(false)}>Cancel</button>
               </div>
             </div>
           </div>
