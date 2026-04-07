@@ -290,6 +290,7 @@ function Sales() {
 
         const newSale = await transactionsAPI.create({
           item: itemIdToUse,
+          item_name: selectedRecipe.name, // Add recipe name as item_name
           quantity: recipeQuantity,
           total: parseFloat(finalTotal),
           status: formData.status

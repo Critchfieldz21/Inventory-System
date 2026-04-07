@@ -3,10 +3,15 @@
 
 echo "🚀 Starting Inventory Tracker Backend..."
 echo ""
-echo "Backend Location: /Users/zacharycritchfield/Desktop/Projects/Inventory\ Tracker/Inventory-System/inventory-tracker/src/Backend"
+
+# Navigate to backend directory (relative to script location)
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+BACKEND_DIR="$SCRIPT_DIR/inventory-tracker/src/Backend"
+
+echo "Backend Location: $BACKEND_DIR"
 echo ""
 
-cd /Users/zacharycritchfield/Desktop/Projects/Inventory\ Tracker/Inventory-System/inventory-tracker/src/Backend
+cd "$BACKEND_DIR" || exit 1
 
 echo "✅ Database Status: OK (SQLite)"
 echo "✅ Migrations: Applied"
@@ -18,4 +23,4 @@ echo ""
 echo "Press Ctrl+C to stop the server"
 echo ""
 
-/usr/local/bin/python3 manage.py runserver 8000
+python3 manage.py runserver 8000
