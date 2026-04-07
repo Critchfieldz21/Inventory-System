@@ -141,8 +141,8 @@ function Home() {
                 <AreaChart data={weeklyData}>
                   <defs>
                     <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.8}/>
-                      <stop offset="95%" stopColor="#4f46e5" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="#1ba827" stopOpacity={0.8}/>
+                      <stop offset="95%" stopColor="#1ba827" stopOpacity={0}/>
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
@@ -152,7 +152,7 @@ function Home() {
                   <Area 
                     type="monotone" 
                     dataKey="profit" 
-                    stroke="#4f46e5" 
+                    stroke="#1ba827" 
                     fillOpacity={1} 
                     fill="url(#colorProfit)" 
                   />

@@ -290,7 +290,7 @@ function Sales() {
 
         const newSale = await transactionsAPI.create({
           item: itemIdToUse,
-          item_name: selectedRecipe.name, // Add recipe name as item_name
+          name: selectedRecipe.name, // Store recipe name
           quantity: recipeQuantity,
           total: parseFloat(finalTotal),
           status: formData.status
@@ -382,7 +382,8 @@ function Sales() {
       setSelectedRows(new Set());
     } catch (err) {
       console.error('Error removing sales:', err);
-      alert('Failed to remove sales');
+      const errorMsg = err.message || 'Failed to remove sales';
+      alert(errorMsg);
     }
   };
 

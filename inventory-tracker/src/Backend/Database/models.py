@@ -35,6 +35,7 @@ class Sales(models.Model):
     STATUS_CHOICES = [('Pending', 'Pending'), ('Completed', 'Completed')]
     
     item = models.ForeignKey(Item, on_delete=models.CASCADE)
+    name = models.CharField(max_length=255, null=True, blank=True)  # Custom name for recipe sales
     quantity = models.IntegerField(default=1)
     total = models.DecimalField(max_digits=10, decimal_places=2)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Completed')
@@ -42,7 +43,7 @@ class Sales(models.Model):
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
-        return f"{self.item.name} - {self.total}"
+        return f"{self.name or self.item.name} - {self.total}"
 
 
 # Signal to deduct stock when a sale is created

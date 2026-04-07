@@ -18,6 +18,11 @@ const apiRequest = async (endpoint, options = {}) => {
       throw new Error(`API Error: ${response.status} ${response.statusText}`);
     }
 
+    // Handle 204 No Content (successful DELETE)
+    if (response.status === 204) {
+      return { success: true };
+    }
+
     return await response.json();
   } catch (error) {
     console.error(`Error fetching ${endpoint}:`, error);

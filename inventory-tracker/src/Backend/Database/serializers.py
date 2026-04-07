@@ -53,9 +53,13 @@ class RecipeSerializer(serializers.ModelSerializer):
 
 
 class SalesSerializer(serializers.ModelSerializer):
-    item_name = serializers.CharField(source='item.name', read_only=True)
+    item_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Sales
-        fields = ['id', 'item', 'item_name', 'quantity', 'total', 'status', 'date', 'created_by']
+        fields = ['id', 'item', 'item_name', 'name', 'quantity', 'total', 'status', 'date', 'created_by']
         read_only_fields = ['date']
+
+    def get_item_name(self, obj):
+        """Return the custom name (for recipes) or the item name (for items)"""
+        return obj.name or obj.item.name
