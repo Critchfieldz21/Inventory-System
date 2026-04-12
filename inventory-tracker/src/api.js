@@ -5,10 +5,10 @@ const API_BASE_URL = 'http://localhost:8000/api';
 // Helper function for API requests
 const apiRequest = async (endpoint, options = {}) => {
   const url = `${API_BASE_URL}${endpoint}`;
+  const isFormData = options.body instanceof FormData;
+  const defaultHeaders = isFormData ? {} : { 'Content-Type': 'application/json' };
   const defaultOptions = {
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers: defaultHeaders,
   };
 
   try {
@@ -83,6 +83,15 @@ export const itemsAPI = {
   getWithSalesInfo: async () => {
     return apiRequest('/items/with_sales_info/');
   },
+
+  importXlsx: async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiRequest('/items/import_xlsx/', {
+      method: 'POST',
+      body: formData,
+    });
+  },
 };
 
 // ============= RECIPES API =============
@@ -129,6 +138,15 @@ export const recipesAPI = {
   // Get components for specific recipe
   getComponents: async (id) => {
     return apiRequest(`/recipes/${id}/components/`);
+  },
+
+  importXlsx: async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiRequest('/recipes/import_xlsx/', {
+      method: 'POST',
+      body: formData,
+    });
   },
 };
 
@@ -188,6 +206,15 @@ export const transactionsAPI = {
   delete: async (id) => {
     return apiRequest(`/sales/${id}/`, {
       method: 'DELETE',
+    });
+  },
+
+  importXlsx: async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiRequest('/sales/import_xlsx/', {
+      method: 'POST',
+      body: formData,
     });
   },
 };

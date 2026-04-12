@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { transactionsAPI, itemsAPI, recipesAPI } from '../../api';
 import './sales.css';
 
 function Sales() {
   const navigate = useNavigate();
+  const importInputRef = useRef(null);
   const [salesData, setSalesData] = useState([]);
   const [items, setItems] = useState([]);
   const [recipes, setRecipes] = useState([]);
@@ -25,36 +26,52 @@ function Sales() {
     status: 'Completed'
   });
 
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const [salesDataBackend, itemsData, recipesData] = await Promise.all([
+        transactionsAPI.getSales(),
+        itemsAPI.getAll(),
+        recipesAPI.getAll()
+      ]);
+      
+      // Handle both paginated (object with results) and direct array responses
+      const salesArray = Array.isArray(salesDataBackend) ? salesDataBackend : (salesDataBackend.results || []);
+      const itemsArray = Array.isArray(itemsData) ? itemsData : (itemsData.results || []);
+      const recipesArray = Array.isArray(recipesData) ? recipesData : (recipesData.results || []);
+      
+      setSalesData(salesArray);
+      setItems(itemsArray);
+      setRecipes(recipesArray);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching data:', err);
+      setError('Failed to load sales data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Fetch sales, items, and recipes from backend
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const [salesDataBackend, itemsData, recipesData] = await Promise.all([
-          transactionsAPI.getSales(),
-          itemsAPI.getAll(),
-          recipesAPI.getAll()
-        ]);
-        
-        // Handle both paginated (object with results) and direct array responses
-        const salesArray = Array.isArray(salesDataBackend) ? salesDataBackend : (salesDataBackend.results || []);
-        const itemsArray = Array.isArray(itemsData) ? itemsData : (itemsData.results || []);
-        const recipesArray = Array.isArray(recipesData) ? recipesData : (recipesData.results || []);
-        
-        setSalesData(salesArray);
-        setItems(itemsArray);
-        setRecipes(recipesArray);
-        setError(null);
-      } catch (err) {
-        console.error('Error fetching data:', err);
-        setError('Failed to load sales data');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
+    loadData();
   }, []);
+
+  const handleImportXlsx = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const result = await transactionsAPI.importXlsx(file);
+      await loadData();
+      alert(`Import complete. Created: ${result.created || 0}, Skipped: ${result.skipped || 0}`);
+    } catch (err) {
+      console.error('Error importing sales xlsx:', err);
+      alert('Failed to import sales xlsx file');
+    } finally {
+      event.target.value = '';
+    }
+  };
 
   const handleAddClick = () => {
     setFormData({ item: '', quantity: '', total: '', status: 'Completed' });
@@ -458,6 +475,14 @@ function Sales() {
             <>
               <div className="table-controls">
                 <button className="action-btn add-btn" onClick={handleAddClick}>Add</button>
+                <button className="action-btn edit-btn" onClick={() => importInputRef.current?.click()}>Import XLSX</button>
+                <input
+                  ref={importInputRef}
+                  type="file"
+                  accept=".xlsx"
+                  style={{ display: 'none' }}
+                  onChange={handleImportXlsx}
+                />
                 <button className="action-btn edit-btn" onClick={handleEditClick}>Edit</button>
                 <button className="action-btn remove-btn" onClick={handleRemoveClick}>Remove</button>
               </div>

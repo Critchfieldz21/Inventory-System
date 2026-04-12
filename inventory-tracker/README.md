@@ -68,3 +68,70 @@ This section has moved here: [https://facebook.github.io/create-react-app/docs/d
 ### `npm run build` fails to minify
 
 This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+
+## XLSX Import Support
+
+The app now supports importing `.xlsx` files for items, sales, and recipes.
+
+### Requirements
+
+- Backend dependency: `openpyxl`
+- Install with: `pip install openpyxl`
+
+### Import Endpoints
+
+- `POST /api/items/import_xlsx/`
+- `POST /api/sales/import_xlsx/`
+- `POST /api/recipes/import_xlsx/`
+
+Use multipart form-data with field name `file`.
+
+### Items XLSX Columns
+
+Required headers:
+
+- `name`
+- `category`
+- `stock`
+- `cost_price`
+- `price`
+
+Behavior:
+
+- Existing item name: stock is added to current stock, and category/cost/price are updated.
+- New item name: a new item is created.
+
+### Sales XLSX Columns
+
+Required headers:
+
+- `item` (item ID or item name)
+- `quantity`
+- `total` (optional value per row; if blank, it is computed as `item.price * quantity`)
+- `status` (`Pending` or `Completed`)
+
+Optional header:
+
+- `date` (ISO format recommended)
+
+Behavior:
+
+- Each row creates one sales transaction.
+- Multiple rows in a single file are supported.
+
+### Recipes XLSX Columns
+
+Required headers:
+
+- `name`
+- `ingredients`
+
+Ingredients supported formats:
+
+- JSON list: `[ {"item": "Burger Buns", "quantity": 1}, {"item": "Beef Patties", "quantity": 1} ]`
+- Text list: `Burger Buns:1;Beef Patties:1;Cheddar Cheese:1`
+
+Behavior:
+
+- Existing recipe name: ingredients are updated.
+- New recipe name: a new recipe is created.

@@ -1,14 +1,21 @@
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.response import Response
 from django.db.models import Sum
 from .models import Item, Recipe, Sales
 from .serializers import ItemSerializer, RecipeSerializer, SalesSerializer
+from .xlsx_imports import (
+    import_items_from_xlsx,
+    import_recipes_from_xlsx,
+    import_sales_from_xlsx,
+)
 
 
 class ItemViewSet(viewsets.ModelViewSet):
     queryset = Item.objects.all()
     serializer_class = ItemSerializer
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
 
     @action(detail=False, methods=['get'])
     def by_category(self, request):
@@ -53,15 +60,45 @@ class ItemViewSet(viewsets.ModelViewSet):
             })
         return Response(data)
 
+    @action(detail=False, methods=['post'])
+    def import_xlsx(self, request):
+        uploaded_file = request.FILES.get('file')
+        if not uploaded_file:
+            return Response({'detail': 'No file uploaded. Use form field "file".'}, status=status.HTTP_400_BAD_REQUEST)
+        if not uploaded_file.name.lower().endswith('.xlsx'):
+            return Response({'detail': 'Only .xlsx files are supported.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            result = import_items_from_xlsx(uploaded_file)
+            return Response(result, status=status.HTTP_200_OK)
+        except Exception as exc:
+            return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
 
 class RecipeViewSet(viewsets.ModelViewSet):
     queryset = Recipe.objects.all()
     serializer_class = RecipeSerializer
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
+
+    @action(detail=False, methods=['post'])
+    def import_xlsx(self, request):
+        uploaded_file = request.FILES.get('file')
+        if not uploaded_file:
+            return Response({'detail': 'No file uploaded. Use form field "file".'}, status=status.HTTP_400_BAD_REQUEST)
+        if not uploaded_file.name.lower().endswith('.xlsx'):
+            return Response({'detail': 'Only .xlsx files are supported.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            result = import_recipes_from_xlsx(uploaded_file)
+            return Response(result, status=status.HTTP_200_OK)
+        except Exception as exc:
+            return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class SalesViewSet(viewsets.ModelViewSet):
     queryset = Sales.objects.all()
     serializer_class = SalesSerializer
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
 
     @action(detail=False, methods=['get'])
     def completed(self, request):
@@ -97,3 +134,18 @@ class SalesViewSet(viewsets.ModelViewSet):
             'total_sales': sales.count(),
             'avg_sale': float(total_revenue / sales.count()) if sales.count() > 0 else 0,
         })
+
+    @action(detail=False, methods=['post'])
+    def import_xlsx(self, request):
+        uploaded_file = request.FILES.get('file')
+        if not uploaded_file:
+            return Response({'detail': 'No file uploaded. Use form field "file".'}, status=status.HTTP_400_BAD_REQUEST)
+        if not uploaded_file.name.lower().endswith('.xlsx'):
+            return Response({'detail': 'Only .xlsx files are supported.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user = request.user if request.user.is_authenticated else None
+            result = import_sales_from_xlsx(uploaded_file, created_by=user)
+            return Response(result, status=status.HTTP_200_OK)
+        except Exception as exc:
+            return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
