@@ -106,7 +106,8 @@ function Sales() {
       item: sale.item,
       quantity: sale.quantity,
       total: sale.total,
-      status: sale.status
+      status: sale.status,
+      date: sale.date ? new Date(sale.date).toISOString().slice(0, 16) : ''
     });
     setShowEditModal(true);
   };
@@ -192,7 +193,8 @@ function Sales() {
         item: parseInt(formData.item),
         quantity: parseInt(formData.quantity),
         total: parseFloat(formData.total),
-        status: formData.status
+        status: formData.status,
+        date: formData.date ? new Date(formData.date).toISOString() : undefined
       });
 
       const updatedSales = salesData.map(sale =>
@@ -534,9 +536,7 @@ function Sales() {
                           onClick={(e) => e.stopPropagation()}
                         >
                           <option value="Pending">Pending</option>
-                          <option value="In Progress">In Progress</option>
                           <option value="Completed">Completed</option>
-                          <option value="Cancelled">Cancelled</option>
                         </select>
                       </td>
                     </tr>
@@ -687,9 +687,7 @@ function Sales() {
                   onChange={handleFormChange}
                 >
                   <option value="Pending">Pending</option>
-                  <option value="In Progress">In Progress</option>
                   <option value="Completed">Completed</option>
-                  <option value="Cancelled">Cancelled</option>
                 </select>
               </div>
               <div className="modal-buttons">
@@ -770,10 +768,17 @@ function Sales() {
                   onChange={handleFormChange}
                 >
                   <option value="Pending">Pending</option>
-                  <option value="In Progress">In Progress</option>
                   <option value="Completed">Completed</option>
-                  <option value="Cancelled">Cancelled</option>
                 </select>
+              </div>
+              <div className="form-group">
+                <label>Date & Time</label>
+                <input
+                  type="datetime-local"
+                  name="date"
+                  value={formData.date || ''}
+                  onChange={handleFormChange}
+                />
               </div>
               <div className="modal-buttons">
                 <button className="btn-confirm" onClick={handleConfirmEdit}>Update Sale</button>

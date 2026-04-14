@@ -58,8 +58,15 @@ class SalesSerializer(serializers.ModelSerializer):
     class Meta:
         model = Sales
         fields = ['id', 'item', 'item_name', 'name', 'quantity', 'total', 'status', 'date', 'created_by']
-        read_only_fields = ['date']
+        read_only_fields = []
 
     def get_item_name(self, obj):
         """Return the custom name (for recipes) or the item name (for items)"""
         return obj.name or obj.item.name
+
+    def create(self, validated_data):
+        """Auto-set date to now if not provided"""
+        from django.utils import timezone
+        if not validated_data.get('date'):
+            validated_data['date'] = timezone.now()
+        return super().create(validated_data)
