@@ -64,7 +64,8 @@ function installDependencies() {
     'django',
     'djangorestframework',
     'django-cors-headers',
-    'python-dotenv'
+    'python-dotenv',
+    'openpyxl'
   ];
 
   const pipInstall = spawn(pipExe, ['install', '-q', ...dependencies], {

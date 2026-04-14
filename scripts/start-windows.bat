@@ -27,7 +27,7 @@ call .venv\Scripts\activate.bat
 REM Install/upgrade Python dependencies
 echo Installing Python dependencies...
 python -m pip install -q --upgrade pip
-pip install -q django djangorestframework django-cors-headers python-dotenv
+pip install -q django djangorestframework django-cors-headers python-dotenv openpyxl
 
 REM Run migrations
 echo Running database migrations...

@@ -25,7 +25,7 @@ source .venv/bin/activate
 # Install/upgrade Python dependencies
 echo "Installing Python dependencies..."
 pip install -q --upgrade pip
-pip install -q django djangorestframework django-cors-headers python-dotenv
+pip install -q django djangorestframework django-cors-headers python-dotenv openpyxl
 
 # Run migrations
 echo "Running database migrations..."
