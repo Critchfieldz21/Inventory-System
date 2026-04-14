@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { itemsAPI, recipesAPI } from '../../api';
 import './items.css';
 
 function Items() {
   const navigate = useNavigate();
+  const importInputRef = useRef(null);
   const [recipes, setRecipes] = useState([]);
   const [inventory, setInventory] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -24,43 +25,59 @@ function Items() {
     price: ''
   });
 
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const [itemsData, recipesData] = await Promise.all([
+        itemsAPI.getAll(),
+        recipesAPI.getAll()
+      ]);
+      
+      // Handle both paginated (object with results) and direct array responses
+      const itemsArray = Array.isArray(itemsData) ? itemsData : (itemsData.results || []);
+      const recipesArray = Array.isArray(recipesData) ? recipesData : (recipesData.results || []);
+      
+      // Convert backend data to frontend format
+      const formattedItems = itemsArray.map(item => ({
+        id: item.id,
+        name: item.name,
+        category: item.category,
+        stock: item.stock,
+        cost_price: `$${parseFloat(item.cost_price || 0).toFixed(2)}`,
+        price: `$${parseFloat(item.price).toFixed(2)}`
+      }));
+      
+      setInventory(formattedItems);
+      setRecipes(recipesArray);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching data:', err);
+      setError('Failed to load items and recipes');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Fetch data from backend
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const [itemsData, recipesData] = await Promise.all([
-          itemsAPI.getAll(),
-          recipesAPI.getAll()
-        ]);
-        
-        // Handle both paginated (object with results) and direct array responses
-        const itemsArray = Array.isArray(itemsData) ? itemsData : (itemsData.results || []);
-        const recipesArray = Array.isArray(recipesData) ? recipesData : (recipesData.results || []);
-        
-        // Convert backend data to frontend format
-        const formattedItems = itemsArray.map(item => ({
-          id: item.id,
-          name: item.name,
-          category: item.category,
-          stock: item.stock,
-          cost_price: `$${parseFloat(item.cost_price || 0).toFixed(2)}`,
-          price: `$${parseFloat(item.price).toFixed(2)}`
-        }));
-        
-        setInventory(formattedItems);
-        setRecipes(recipesArray);
-        setError(null);
-      } catch (err) {
-        console.error('Error fetching data:', err);
-        setError('Failed to load items and recipes');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
+    loadData();
   }, []);
+
+  const handleImportXlsx = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const result = await itemsAPI.importXlsx(file);
+      await loadData();
+      alert(`Import complete. Created: ${result.created || 0}, Updated: ${result.updated || 0}, Skipped: ${result.skipped || 0}`);
+    } catch (err) {
+      console.error('Error importing items xlsx:', err);
+      alert('Failed to import items xlsx file');
+    } finally {
+      event.target.value = '';
+    }
+  };
 
   const handleAddClick = () => {
     setFormData({ name: '', category: '', stock: '', cost_price: '', price: '' });
@@ -298,6 +315,14 @@ function Items() {
             <>
           <div className="table-controls">
             <button className="action-btn add-btn" onClick={handleAddClick}>Add</button>
+            <button className="action-btn edit-btn" onClick={() => importInputRef.current?.click()}>Import XLSX</button>
+            <input
+              ref={importInputRef}
+              type="file"
+              accept=".xlsx"
+              style={{ display: 'none' }}
+              onChange={handleImportXlsx}
+            />
             <button className="action-btn edit-btn" onClick={() => {
               if (selectedItems.size === 0) {
                 alert('Please select an item to edit');

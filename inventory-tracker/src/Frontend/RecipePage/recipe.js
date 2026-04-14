@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { recipesAPI, itemsAPI } from '../../api';
 import './recipe.css';
 
 function Recipe() {
   const navigate = useNavigate();
+  const importInputRef = useRef(null);
   const [recipes, setRecipes] = useState([]);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -20,31 +21,47 @@ function Recipe() {
     ingredients: []
   });
 
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const [recipesData, itemsData] = await Promise.all([
+        recipesAPI.getAll(),
+        itemsAPI.getAll()
+      ]);
+      // Handle both paginated (object with results) and direct array responses
+      const recipesArray = Array.isArray(recipesData) ? recipesData : (recipesData.results || []);
+      const itemsArray = Array.isArray(itemsData) ? itemsData : (itemsData.results || []);
+      setRecipes(recipesArray);
+      setItems(itemsArray);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching data:', err);
+      setError('Failed to load recipes');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Fetch recipes and items from backend
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const [recipesData, itemsData] = await Promise.all([
-          recipesAPI.getAll(),
-          itemsAPI.getAll()
-        ]);
-        // Handle both paginated (object with results) and direct array responses
-        const recipesArray = Array.isArray(recipesData) ? recipesData : (recipesData.results || []);
-        const itemsArray = Array.isArray(itemsData) ? itemsData : (itemsData.results || []);
-        setRecipes(recipesArray);
-        setItems(itemsArray);
-        setError(null);
-      } catch (err) {
-        console.error('Error fetching data:', err);
-        setError('Failed to load recipes');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
+    loadData();
   }, []);
+
+  const handleImportXlsx = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const result = await recipesAPI.importXlsx(file);
+      await loadData();
+      alert(`Import complete. Created: ${result.created || 0}, Updated: ${result.updated || 0}, Skipped: ${result.skipped || 0}`);
+    } catch (err) {
+      console.error('Error importing recipes xlsx:', err);
+      alert('Failed to import recipes xlsx file');
+    } finally {
+      event.target.value = '';
+    }
+  };
 
   const handleAddClick = () => {
     setFormData({ name: '', ingredients: [] });
@@ -219,6 +236,14 @@ function Recipe() {
           <>
         <div className="table-controls">
           <button className="action-btn add-btn" onClick={handleAddClick}>Add</button>
+          <button className="action-btn edit-btn" onClick={() => importInputRef.current?.click()}>Import XLSX</button>
+          <input
+            ref={importInputRef}
+            type="file"
+            accept=".xlsx"
+            style={{ display: 'none' }}
+            onChange={handleImportXlsx}
+          />
           <button className="action-btn edit-btn" onClick={handleEditClick}>Edit</button>
           <button className="action-btn remove-btn" onClick={handleRemoveClick}>Remove</button>
         </div>
