@@ -3,6 +3,72 @@ import { Link, useNavigate } from 'react-router-dom';
 import { itemsAPI, recipesAPI } from '../../api';
 import './items.css';
 
+function SearchableSelect({ options, value, onChange, placeholder, displayKey, valueKey, disabled }) {
+  const [query, setQuery] = useState('');
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  const selected = options.find(o => String(o[valueKey]) === String(value));
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const filtered = options.filter(o =>
+    o[displayKey].toLowerCase().includes(query.toLowerCase())
+  );
+
+  const handleSelect = (option) => {
+    onChange(option[valueKey]);
+    setQuery('');
+    setOpen(false);
+  };
+
+  return (
+    <div className="searchable-select" ref={ref}>
+      <div
+        className={`searchable-select-input${disabled ? ' searchable-select-disabled' : ''}`}
+        onClick={() => { if (!disabled) setOpen(true); }}
+      >
+        {!open && selected ? (
+          <span className="searchable-select-value">{selected[displayKey]}</span>
+        ) : (
+          <input
+            autoFocus={open}
+            type="text"
+            value={query}
+            onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
+            placeholder={selected ? selected[displayKey] : placeholder}
+            className="searchable-select-text"
+            disabled={disabled}
+            readOnly={disabled}
+          />
+        )}
+        <span className="searchable-select-arrow">▾</span>
+      </div>
+      {open && (
+        <ul className="searchable-select-dropdown">
+          {filtered.length === 0 ? (
+            <li className="searchable-select-no-results">No results found</li>
+          ) : (
+            filtered.map(option => (
+              <li
+                key={option[valueKey]}
+                className={`searchable-select-option ${String(option[valueKey]) === String(value) ? 'selected' : ''}`}
+                onMouseDown={() => handleSelect(option)}
+              >
+                {option[displayKey]}
+              </li>
+            ))
+          )}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function Items() {
   const navigate = useNavigate();
   const importInputRef = useRef(null);
@@ -17,6 +83,9 @@ function Items() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [isCreatingNewItem, setIsCreatingNewItem] = useState(false);
   const [editingItemId, setEditingItemId] = useState(null);
+  const [categories, setCategories] = useState(['Ingredients']);
+  const [newCategoryInput, setNewCategoryInput] = useState('');
+  const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     category: '',
@@ -49,6 +118,9 @@ function Items() {
       
       setInventory(formattedItems);
       setRecipes(recipesArray);
+      // Merge any categories already used in inventory into the categories list
+      const existingCats = [...new Set(itemsArray.map(i => i.category).filter(Boolean))];
+      setCategories(prev => [...new Set([...prev, ...existingCats])]);
       setError(null);
     } catch (err) {
       console.error('Error fetching data:', err);
@@ -147,14 +219,8 @@ function Items() {
 
   const handleConfirmAdd = async () => {
     if (formData.name && formData.category && formData.stock && formData.cost_price && formData.price) {
-      // Validate that cost price is less than selling price
       const costPrice = parseFloat(formData.cost_price.replace('$', ''));
       const sellingPrice = parseFloat(formData.price.replace('$', ''));
-      
-      if (costPrice >= sellingPrice) {
-        alert('Cost Price must be less than Selling Price!');
-        return;
-      }
       
       try {
         // Check if item already exists
@@ -188,6 +254,8 @@ function Items() {
           setShowAddModal(false);
           setFormData({ name: '', category: '', stock: '', cost_price: '', price: '' });
           setIsCreatingNewItem(false);
+          setShowNewCategoryInput(false);
+          setNewCategoryInput('');
         } else {
           // Create new item
           const newItem = await itemsAPI.create({
@@ -211,6 +279,8 @@ function Items() {
           setShowAddModal(false);
           setFormData({ name: '', category: '', stock: '', cost_price: '', price: '' });
           setIsCreatingNewItem(false);
+          setShowNewCategoryInput(false);
+          setNewCategoryInput('');
         }
       } catch (err) {
         console.error('Error adding item:', err);
@@ -239,14 +309,8 @@ function Items() {
 
   const handleConfirmEdit = async () => {
     if (formData.name && formData.category && formData.stock && formData.cost_price && formData.price) {
-      // Validate that cost price is less than selling price
       const costPrice = parseFloat(formData.cost_price.replace('$', ''));
       const sellingPrice = parseFloat(formData.price.replace('$', ''));
-      
-      if (costPrice >= sellingPrice) {
-        alert('Cost Price must be less than Selling Price!');
-        return;
-      }
 
       try {
         const updatedItem = await itemsAPI.update(editingItemId, {
@@ -275,6 +339,8 @@ function Items() {
         setShowEditModal(false);
         setEditingItemId(null);
         setFormData({ name: '', category: '', stock: '', cost_price: '', price: '' });
+        setShowNewCategoryInput(false);
+        setNewCategoryInput('');
       } catch (err) {
         console.error('Error updating item:', err);
         alert('Failed to update item');
@@ -402,68 +468,108 @@ function Items() {
 
         {/* Add Item Modal */}
         {showAddModal && (
-          <div className="modal-overlay" onClick={() => setShowAddModal(false)}>
+          <div className="modal-overlay" onClick={() => { setShowAddModal(false); setShowNewCategoryInput(false); setNewCategoryInput(''); }}>
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
               <h2>Add New Item</h2>
               <div className="form-group">
                 <label>Item Name</label>
                 {!isCreatingNewItem ? (
-                  <select 
-                    value={formData.name}
-                    onChange={(e) => {
-                      if (e.target.value === 'other') {
-                        setIsCreatingNewItem(true);
-                        setFormData({...formData, name: '', category: '', cost_price: '', price: ''});
-                      } else {
-                        // Find the selected item and populate its details
-                        const selectedItem = inventory.find(item => item.name === e.target.value);
+                  <div>
+                    <SearchableSelect
+                      options={inventory}
+                      value={formData.name ? inventory.find(i => i.name === formData.name)?.id ?? '' : ''}
+                      onChange={(val) => {
+                        const selectedItem = inventory.find(item => item.id === parseInt(val));
                         if (selectedItem) {
                           setFormData({
-                            ...formData, 
-                            name: e.target.value,
+                            ...formData,
+                            name: selectedItem.name,
                             category: selectedItem.category,
                             cost_price: selectedItem.cost_price,
                             price: selectedItem.price
                           });
                         }
-                      }
-                    }}
-                  >
-                    <option value="">Select an existing item</option>
-                    {inventory.map((item) => (
-                      <option key={item.id} value={item.name}>
-                        {item.name}
-                      </option>
-                    ))}
-                    <option value="other">+ Create New Item</option>
-                  </select>
+                      }}
+                      placeholder="Search for an existing item..."
+                      displayKey="name"
+                      valueKey="id"
+                    />
+                    <button
+                      className="btn-create-new-item"
+                      onClick={() => { setIsCreatingNewItem(true); setFormData({...formData, name: '', category: '', cost_price: '', price: ''}); }}
+                    >
+                      + Create New Item
+                    </button>
+                  </div>
                 ) : (
-                  <div>
+                  <div className="new-item-name-group">
                     <input 
                       type="text" 
                       value={formData.name}
                       onChange={(e) => setFormData({...formData, name: e.target.value})}
                       placeholder="Enter new item name"
                     />
-                    <button 
+                    <button
+                      className="btn-back-to-existing"
                       onClick={() => setIsCreatingNewItem(false)}
-                      style={{marginTop: '10px', padding: '5px 10px', cursor: 'pointer'}}
                     >
-                      Back to existing items
+                      ← Back to existing items
                     </button>
                   </div>
                 )}
               </div>
               <div className="form-group">
                 <label>Category</label>
-                <select 
+                <SearchableSelect
+                  options={categories.map(cat => ({ label: cat, value: cat }))}
                   value={formData.category}
-                  onChange={(e) => setFormData({...formData, category: e.target.value})}
+                  onChange={(val) => setFormData({...formData, category: val})}
+                  placeholder="Select a category..."
+                  displayKey="label"
+                  valueKey="value"
                   disabled={!isCreatingNewItem && formData.name}
-                >
-                  <option value="">Select a category</option>
-                  <option value="Ingredients">Ingredients</option>
-                </select>
+                />
+                {!showNewCategoryInput && (
+                  <button
+                    className="btn-create-new-item"
+                    onClick={() => setShowNewCategoryInput(true)}
+                  >
+                    + Add New Category
+                  </button>
+                )}
+                {showNewCategoryInput && (
+                  <div className="new-category-input-group">
+                    <input
+                      type="text"
+                      value={newCategoryInput}
+                      onChange={(e) => setNewCategoryInput(e.target.value)}
+                      placeholder="Enter new category name"
+                      autoFocus
+                    />
+                    <div className="new-category-buttons">
+                      <button
+                        className="btn-add-category"
+                        onClick={() => {
+                          const trimmed = newCategoryInput.trim();
+                          if (trimmed && !categories.includes(trimmed)) {
+                            setCategories(prev => [...prev, trimmed]);
+                          }
+                          if (trimmed) setFormData({...formData, category: trimmed});
+                          setNewCategoryInput('');
+                          setShowNewCategoryInput(false);
+                        }}
+                      >
+                        Add
+                      </button>
+                      <button
+                        className="btn-cancel-category"
+                        onClick={() => { setNewCategoryInput(''); setShowNewCategoryInput(false); }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="form-group">
                 <label>Stock</label>
@@ -493,10 +599,22 @@ function Items() {
                   disabled={!isCreatingNewItem && formData.name}
                   placeholder="$0.00"
                 />
+                {(() => {
+                  const cost = parseFloat(String(formData.cost_price).replace('$', ''));
+                  const sell = parseFloat(String(formData.price).replace('$', ''));
+                  if (!isNaN(cost) && !isNaN(sell) && cost >= sell) {
+                    return (
+                      <div className="price-warning">
+                        Cost price must be <strong>less than</strong> the selling price
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
               </div>
               <div className="modal-buttons">
                 <button className="btn-confirm" onClick={handleConfirmAdd}>Add Item</button>
-                <button className="btn-cancel" onClick={() => setShowAddModal(false)}>Cancel</button>
+                <button className="btn-cancel" onClick={() => { setShowAddModal(false); setShowNewCategoryInput(false); setNewCategoryInput(''); }}>Cancel</button>
               </div>
             </div>
           </div>
@@ -525,7 +643,7 @@ function Items() {
 
         {/* Edit Item Modal */}
         {showEditModal && (
-          <div className="modal-overlay" onClick={() => setShowEditModal(false)}>
+          <div className="modal-overlay" onClick={() => { setShowEditModal(false); setShowNewCategoryInput(false); setNewCategoryInput(''); }}>
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
               <h2>Edit Item</h2>
               <div className="form-group">
@@ -539,13 +657,55 @@ function Items() {
               </div>
               <div className="form-group">
                 <label>Category</label>
-                <select 
+                <SearchableSelect
+                  options={categories.map(cat => ({ label: cat, value: cat }))}
                   value={formData.category}
-                  onChange={(e) => setFormData({...formData, category: e.target.value})}
-                >
-                  <option value="">Select a category</option>
-                  <option value="Ingredients">Ingredients</option>
-                </select>
+                  onChange={(val) => setFormData({...formData, category: val})}
+                  placeholder="Select a category..."
+                  displayKey="label"
+                  valueKey="value"
+                />
+                {!showNewCategoryInput && (
+                  <button
+                    className="btn-create-new-item"
+                    onClick={() => setShowNewCategoryInput(true)}
+                  >
+                    + Add New Category
+                  </button>
+                )}
+                {showNewCategoryInput && (
+                  <div className="new-category-input-group">
+                    <input
+                      type="text"
+                      value={newCategoryInput}
+                      onChange={(e) => setNewCategoryInput(e.target.value)}
+                      placeholder="Enter new category name"
+                      autoFocus
+                    />
+                    <div className="new-category-buttons">
+                      <button
+                        className="btn-add-category"
+                        onClick={() => {
+                          const trimmed = newCategoryInput.trim();
+                          if (trimmed && !categories.includes(trimmed)) {
+                            setCategories(prev => [...prev, trimmed]);
+                          }
+                          if (trimmed) setFormData({...formData, category: trimmed});
+                          setNewCategoryInput('');
+                          setShowNewCategoryInput(false);
+                        }}
+                      >
+                        Add
+                      </button>
+                      <button
+                        className="btn-cancel-category"
+                        onClick={() => { setNewCategoryInput(''); setShowNewCategoryInput(false); }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="form-group">
                 <label>Stock</label>
@@ -573,10 +733,22 @@ function Items() {
                   onChange={(e) => setFormData({...formData, price: e.target.value})}
                   placeholder="$0.00"
                 />
+                {(() => {
+                  const cost = parseFloat(String(formData.cost_price).replace('$', ''));
+                  const sell = parseFloat(String(formData.price).replace('$', ''));
+                  if (!isNaN(cost) && !isNaN(sell) && cost >= sell) {
+                    return (
+                      <div className="price-warning">
+                        ⚠️ Cost price must be <strong>less than</strong> the selling price
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
               </div>
               <div className="modal-buttons">
                 <button className="btn-confirm" onClick={handleConfirmEdit}>Update Item</button>
-                <button className="btn-cancel" onClick={() => setShowEditModal(false)}>Cancel</button>
+                <button className="btn-cancel" onClick={() => { setShowEditModal(false); setShowNewCategoryInput(false); setNewCategoryInput(''); }}>Cancel</button>
               </div>
             </div>
           </div>

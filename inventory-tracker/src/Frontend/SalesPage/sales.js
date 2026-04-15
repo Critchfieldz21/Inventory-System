@@ -3,6 +3,70 @@ import { useNavigate, Link } from 'react-router-dom';
 import { transactionsAPI, itemsAPI, recipesAPI } from '../../api';
 import './sales.css';
 
+function SearchableSelect({ options, value, onChange, placeholder, displayKey, valueKey, subKey }) {
+  const [query, setQuery] = useState('');
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  const selected = options.find(o => String(o[valueKey]) === String(value));
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const filtered = options.filter(o =>
+    o[displayKey].toLowerCase().includes(query.toLowerCase())
+  );
+
+  const handleSelect = (option) => {
+    onChange(option[valueKey]);
+    setQuery('');
+    setOpen(false);
+  };
+
+  return (
+    <div className="searchable-select" ref={ref}>
+      <div className="searchable-select-input" onClick={() => setOpen(true)}>
+        {!open && selected ? (
+          <span className="searchable-select-value">
+            {selected[displayKey]}{subKey ? ` (Stock: ${selected[subKey]})` : ''}
+          </span>
+        ) : (
+          <input
+            autoFocus={open}
+            type="text"
+            value={query}
+            onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
+            placeholder={selected ? selected[displayKey] : placeholder}
+            className="searchable-select-text"
+          />
+        )}
+        <span className="searchable-select-arrow">▾</span>
+      </div>
+      {open && (
+        <ul className="searchable-select-dropdown">
+          {filtered.length === 0 ? (
+            <li className="searchable-select-no-results">No results found</li>
+          ) : (
+            filtered.map(option => (
+              <li
+                key={option[valueKey]}
+                className={`searchable-select-option ${String(option[valueKey]) === String(value) ? 'selected' : ''}`}
+                onMouseDown={() => handleSelect(option)}
+              >
+                {option[displayKey]}{subKey ? ` (Stock: ${option[subKey]})` : ''}
+              </li>
+            ))
+          )}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function Sales() {
   const navigate = useNavigate();
   const importInputRef = useRef(null);
@@ -582,18 +646,15 @@ function Sales() {
                 <>
                   <div className="form-group">
                     <label>Item</label>
-                    <select 
-                      name="item"
+                    <SearchableSelect
+                      options={items}
                       value={formData.item}
-                      onChange={handleFormChange}
-                    >
-                      <option value="">Select an item</option>
-                      {items.map((item) => (
-                        <option key={item.id} value={item.id}>
-                          {item.name} (Stock: {item.stock})
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(val) => handleFormChange({ target: { name: 'item', value: val } })}
+                      placeholder="Search for an item..."
+                      displayKey="name"
+                      valueKey="id"
+                      subKey="stock"
+                    />
                   </div>
                   <div className="form-group">
                     <label>Quantity</label>
@@ -610,18 +671,14 @@ function Sales() {
                 <>
                   <div className="form-group">
                     <label>Recipe</label>
-                    <select 
-                      name="item"
+                    <SearchableSelect
+                      options={recipes}
                       value={formData.item}
-                      onChange={(e) => handleRecipeChange(e.target.value)}
-                    >
-                      <option value="">Select a recipe</option>
-                      {recipes.map((recipe) => (
-                        <option key={recipe.id} value={recipe.id}>
-                          {recipe.name}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(val) => handleRecipeChange(val)}
+                      placeholder="Search for a recipe..."
+                      displayKey="name"
+                      valueKey="id"
+                    />
                   </div>
                   <div className="form-group">
                     <label>Recipe Quantity</label>

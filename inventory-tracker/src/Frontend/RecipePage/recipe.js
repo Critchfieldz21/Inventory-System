@@ -16,6 +16,7 @@ function Recipe() {
   const [showRemoveModal, setShowRemoveModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingRecipeId, setEditingRecipeId] = useState(null);
+  const [ingredientSearch, setIngredientSearch] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     ingredients: []
@@ -65,6 +66,7 @@ function Recipe() {
 
   const handleAddClick = () => {
     setFormData({ name: '', ingredients: [] });
+    setIngredientSearch('');
     setShowAddModal(true);
   };
 
@@ -129,6 +131,7 @@ function Recipe() {
         setShowEditModal(false);
         setEditingRecipeId(null);
         setFormData({ name: '', ingredients: [] });
+        setIngredientSearch('');
         setSelectedRecipes(new Set());
       } catch (err) {
         console.error('Error updating recipe:', err);
@@ -189,6 +192,7 @@ function Recipe() {
         setRecipes([...recipes, newRecipe]);
         setShowAddModal(false);
         setFormData({ name: '', ingredients: [] });
+        setIngredientSearch('');
       } catch (err) {
         console.error('Error adding recipe:', err);
         alert('Failed to add recipe');
@@ -273,7 +277,7 @@ function Recipe() {
 
         {/* Add Recipe Modal */}
         {showAddModal && (
-          <div className="modal-overlay" onClick={() => setShowAddModal(false)}>
+          <div className="modal-overlay" onClick={() => { setShowAddModal(false); setIngredientSearch(''); }}>
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
               <h2>Add New Recipe</h2>
               <div className="form-group">
@@ -288,17 +292,29 @@ function Recipe() {
 
               <div className="form-group">
                 <label>Select Ingredients from Inventory</label>
+                <input
+                  type="text"
+                  className="ingredient-search"
+                  placeholder="Search ingredients..."
+                  value={ingredientSearch}
+                  onChange={(e) => setIngredientSearch(e.target.value)}
+                />
                 <div className="ingredient-selector">
-                  {items.map((item) => (
-                    <button
-                      key={item.id}
-                      className="ingredient-btn"
-                      onClick={() => handleAddIngredient(item.name)}
-                      disabled={formData.ingredients.find(ing => ing.name === item.name)}
-                    >
-                      + {item.name}
-                    </button>
-                  ))}
+                  {items
+                    .filter(item => item.name.toLowerCase().includes(ingredientSearch.toLowerCase()))
+                    .map((item) => (
+                      <button
+                        key={item.id}
+                        className="ingredient-btn"
+                        onClick={() => handleAddIngredient(item.name)}
+                        disabled={formData.ingredients.find(ing => ing.name === item.name)}
+                      >
+                        + {item.name}
+                      </button>
+                    ))}
+                  {items.filter(item => item.name.toLowerCase().includes(ingredientSearch.toLowerCase())).length === 0 && (
+                    <p className="ingredient-no-results">No ingredients match "{ingredientSearch}"</p>
+                  )}
                 </div>
               </div>
 
@@ -332,7 +348,7 @@ function Recipe() {
 
               <div className="modal-buttons">
                 <button className="btn-confirm" onClick={handleConfirmAdd}>Add Recipe</button>
-                <button className="btn-cancel" onClick={() => setShowAddModal(false)}>Cancel</button>
+                <button className="btn-cancel" onClick={() => { setShowAddModal(false); setIngredientSearch(''); }}>Cancel</button>
               </div>
             </div>
           </div>
@@ -361,7 +377,7 @@ function Recipe() {
 
         {/* Edit Recipe Modal */}
         {showEditModal && (
-          <div className="modal-overlay" onClick={() => setShowEditModal(false)}>
+          <div className="modal-overlay" onClick={() => { setShowEditModal(false); setIngredientSearch(''); }}>
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
               <h2>Edit Recipe</h2>
               <div className="form-group">
@@ -376,17 +392,29 @@ function Recipe() {
 
               <div className="form-group">
                 <label>Select Ingredients from Inventory</label>
+                <input
+                  type="text"
+                  className="ingredient-search"
+                  placeholder="Search ingredients..."
+                  value={ingredientSearch}
+                  onChange={(e) => setIngredientSearch(e.target.value)}
+                />
                 <div className="ingredient-selector">
-                  {items.map((item) => (
-                    <button
-                      key={item.id}
-                      className="ingredient-btn"
-                      onClick={() => handleAddIngredient(item.name)}
-                      disabled={formData.ingredients.find(ing => ing.name === item.name)}
-                    >
-                      + {item.name}
-                    </button>
-                  ))}
+                  {items
+                    .filter(item => item.name.toLowerCase().includes(ingredientSearch.toLowerCase()))
+                    .map((item) => (
+                      <button
+                        key={item.id}
+                        className="ingredient-btn"
+                        onClick={() => handleAddIngredient(item.name)}
+                        disabled={formData.ingredients.find(ing => ing.name === item.name)}
+                      >
+                        + {item.name}
+                      </button>
+                    ))}
+                  {items.filter(item => item.name.toLowerCase().includes(ingredientSearch.toLowerCase())).length === 0 && (
+                    <p className="ingredient-no-results">No ingredients match "{ingredientSearch}"</p>
+                  )}
                 </div>
               </div>
 
@@ -420,7 +448,7 @@ function Recipe() {
 
               <div className="modal-buttons">
                 <button className="btn-confirm" onClick={handleConfirmEdit}>Update Recipe</button>
-                <button className="btn-cancel" onClick={() => setShowEditModal(false)}>Cancel</button>
+                <button className="btn-cancel" onClick={() => { setShowEditModal(false); setIngredientSearch(''); }}>Cancel</button>
               </div>
             </div>
           </div>

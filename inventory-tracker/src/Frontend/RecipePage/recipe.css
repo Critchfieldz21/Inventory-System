@@ -330,6 +330,34 @@
   flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 12px;
+  margin-top: 8px;
+}
+
+.ingredient-search {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  background: #f9fafb;
+  color: #374151;
+  box-sizing: border-box;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  margin-bottom: 0;
+}
+
+.ingredient-search:focus {
+  outline: none;
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+  background: white;
+}
+
+.ingredient-no-results {
+  font-size: 13px;
+  color: #9ca3af;
+  font-style: italic;
+  padding: 4px 0;
 }
 
 .ingredient-btn {

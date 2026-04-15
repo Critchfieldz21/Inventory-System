@@ -9,11 +9,7 @@ class ItemSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'category', 'stock', 'cost_price', 'price', 'created_at', 'updated_at']
         read_only_fields = ['created_at', 'updated_at']
     
-    def validate(self, data):
-        if data.get('cost_price') and data.get('price'):
-            if data['cost_price'] >= data['price']:
-                raise serializers.ValidationError('Cost price must be less than selling price.')
-        return data
+
 
 
 class RecipeSerializer(serializers.ModelSerializer):
