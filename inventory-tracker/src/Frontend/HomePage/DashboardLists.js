@@ -11,14 +11,17 @@
 import React from 'react';
 import './DashboardLists.css';
 
-function DashboardLists({ topItems, lowStockItems }) {
+const PERIOD_LABEL = { week: 'This Week', month: 'This Month', quarter: 'This Quarter' };
+
+function DashboardLists({ topItems, lowStockItems, chartView = 'week' }) {
+  const periodLabel = PERIOD_LABEL[chartView] || 'This Week';
   return (
     <div className="bottom-lists-row">
 
       {/* Top 3 Items Sold */}
       <div className="status-card">
         <div className="card-header">
-          <h3>Top 3 Items Sold</h3>
+          <h3>Top 3 Items Sold — {periodLabel}</h3>
         </div>
         <ul className="status-list">
           {topItems.length > 0 ? (

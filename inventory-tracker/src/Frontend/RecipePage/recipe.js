@@ -15,6 +15,7 @@ function Recipe() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const [selectedRecipes, setSelectedRecipes] = useState(new Set());
   const [showAddModal, setShowAddModal] = useState(false);
@@ -220,14 +221,30 @@ function Recipe() {
   };
 
   return (
-    <div className="home-layout">
-      <aside className="sidebar">
+    <div className={`home-layout${sidebarOpen ? ' sidebar-open' : ''}`}>
+
+      {/* ── Hamburger Button ── */}
+      <button
+        className={`hamburger-btn${sidebarOpen ? ' open' : ''}`}
+        onClick={() => setSidebarOpen(o => !o)}
+        aria-label="Toggle sidebar"
+      >
+        <span /><span /><span />
+      </button>
+
+      {/* ── Overlay ── */}
+      <div
+        className={`sidebar-overlay${sidebarOpen ? ' visible' : ''}`}
+        onClick={() => setSidebarOpen(false)}
+      />
+
+      <aside className={`sidebar${sidebarOpen ? ' open' : ''}`}>
         <h2 className="sidebar-logo">Inventory Tracker</h2>
         <nav className="nav-links">
-          <Link to="/home">Home</Link>
-          <Link to="/inventory">Items</Link>
-          <Link to="/sales">Sales</Link>
-          <Link to="/recipe" className="active">Recipes</Link>
+          <Link to="/home" onClick={() => setSidebarOpen(false)}>Home</Link>
+          <Link to="/inventory" onClick={() => setSidebarOpen(false)}>Inventory</Link>
+          <Link to="/sales" onClick={() => setSidebarOpen(false)}>Sales</Link>
+          <Link to="/recipe" className="active" onClick={() => setSidebarOpen(false)}>Recipes</Link>
         </nav>
         <button onClick={() => navigate('/')} className="logout-btn">Logout</button>
       </aside>

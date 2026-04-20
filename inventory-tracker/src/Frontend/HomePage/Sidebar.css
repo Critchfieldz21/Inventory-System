@@ -16,11 +16,72 @@
 }
 
 /* --- App Layout Shell --- */
+body {
+  overflow-x: hidden;
+}
+
 .home-layout {
-  display: flex;
-  height: 100vh;
+  min-height: 100vh;
   background-color: #f9fafb;
   font-family: 'Inter', sans-serif;
+  overflow-x: hidden;
+}
+
+/* --- Hamburger Button --- */
+.hamburger-btn {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 200;
+  background: var(--sidebar-bg);
+  border: none;
+  border-radius: 8px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  padding: 8px;
+  transition: background 0.2s ease;
+}
+
+.hamburger-btn:hover {
+  background: var(--primary-color);
+}
+
+.hamburger-btn span {
+  display: block;
+  width: 20px;
+  height: 2px;
+  background: white;
+  border-radius: 2px;
+  transition: all 0.3s ease;
+}
+
+/* Animate bars to X when open */
+.hamburger-btn.open span:nth-child(1) {
+  transform: translateY(7px) rotate(45deg);
+}
+.hamburger-btn.open span:nth-child(2) {
+  opacity: 0;
+}
+.hamburger-btn.open span:nth-child(3) {
+  transform: translateY(-7px) rotate(-45deg);
+}
+
+/* --- Sidebar Overlay (mobile backdrop) --- */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 99;
+}
+.sidebar-overlay.visible {
+  display: block;
 }
 
 /* --- Sidebar --- */
@@ -32,6 +93,29 @@
   flex-direction: column;
   padding: 30px 20px;
   flex-shrink: 0;
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  z-index: 100;
+  transform: translateX(-260px);
+  visibility: hidden;
+  transition: transform 0.3s ease, visibility 0.3s ease;
+}
+
+.sidebar.open {
+  transform: translateX(0);
+  visibility: visible;
+}
+
+/* Push main content over when sidebar is open */
+.main-content {
+  transition: margin-left 0.3s ease;
+  min-height: 100vh;
+  padding-top: 70px; /* space below hamburger button */
+}
+.sidebar-open .main-content {
+  margin-left: 260px;
 }
 
 .sidebar-logo {

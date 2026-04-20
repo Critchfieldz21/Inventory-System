@@ -28,8 +28,10 @@ function Items() {
   // ── Data State ──
   const [recipes, setRecipes] = useState([]);     // All recipes — needed to check if an item is in use
   const [inventory, setInventory] = useState([]); // All inventory items shown in the table
-  const [loading, setLoading] = useState(true);   // Shows a loading message while fetching
-  const [error, setError] = useState(null);        // Shows an error message if the fetch fails
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // ── Selection State ──
   // A Set of row *indexes* (not IDs) that currently have their checkbox ticked
@@ -204,19 +206,45 @@ function Items() {
   };
 
   // ─────────────────────────────────────────────
+  // Filter inventory by search query (name or category)
+  const filteredInventory = inventory.filter(item => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      (item.name  && item.name.toLowerCase().includes(q)) ||
+      (item.category && item.category.toLowerCase().includes(q))
+    );
+  });
+
+  // ─────────────────────────────────────────────
   // Render
   // ─────────────────────────────────────────────
   return (
-    <div className="home-layout">
+    <div className={`home-layout${sidebarOpen ? ' sidebar-open' : ''}`}>
+
+      {/* ── Hamburger Button ── */}
+      <button
+        className={`hamburger-btn${sidebarOpen ? ' open' : ''}`}
+        onClick={() => setSidebarOpen(o => !o)}
+        aria-label="Toggle sidebar"
+      >
+        <span /><span /><span />
+      </button>
+
+      {/* ── Overlay ── */}
+      <div
+        className={`sidebar-overlay${sidebarOpen ? ' visible' : ''}`}
+        onClick={() => setSidebarOpen(false)}
+      />
 
       {/* ── Sidebar Navigation ── */}
-      <aside className="sidebar">
+      <aside className={`sidebar${sidebarOpen ? ' open' : ''}`}>
         <h2 className="sidebar-logo">Inventory Tracker</h2>
         <nav className="nav-links">
-          <Link to="/home">Home</Link>
-          <Link to="/inventory" className="active">Items</Link>
-          <Link to="/sales">Sales</Link>
-          <Link to="/recipe">Recipes</Link>
+          <Link to="/home" onClick={() => setSidebarOpen(false)}>Home</Link>
+          <Link to="/inventory" className="active" onClick={() => setSidebarOpen(false)}>Inventory</Link>
+          <Link to="/sales" onClick={() => setSidebarOpen(false)}>Sales</Link>
+          <Link to="/recipe" onClick={() => setSidebarOpen(false)}>Recipes</Link>
         </nav>
         <button onClick={() => navigate('/')} className="logout-btn">Logout</button>
       </aside>
@@ -255,6 +283,20 @@ function Items() {
 
                 <button className="action-btn edit-btn" onClick={handleEditClick}>Edit</button>
                 <button className="action-btn remove-btn" onClick={handleRemoveClick}>Remove</button>
+
+                {/* Search bar — filters by item name or category */}
+                <div className="items-search-wrapper">
+                  <input
+                    type="text"
+                    className="items-search-input"
+                    placeholder="Search by name or category…"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                  {searchQuery && (
+                    <button className="items-search-clear" onClick={() => setSearchQuery('')}>✕</button>
+                  )}
+                </div>
               </div>
 
               {/* ── Inventory Table ── */}
@@ -265,7 +307,7 @@ function Items() {
                       {/* "Select All" checkbox in the header */}
                       <input
                         type="checkbox"
-                        checked={selectedItems.size === inventory.length && inventory.length > 0}
+                        checked={selectedItems.size === filteredInventory.length && filteredInventory.length > 0}
                         onChange={handleSelectAll}
                         className="checkbox-header"
                       />
@@ -279,7 +321,7 @@ function Items() {
                   </tr>
                 </thead>
                 <tbody>
-                  {inventory.map((item, index) => (
+                  {filteredInventory.map((item, index) => (
                     <tr key={item.id} className={selectedItems.has(index) ? 'selected-row' : ''}>
                       <td>
                         <input

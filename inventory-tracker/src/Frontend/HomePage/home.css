@@ -9,7 +9,6 @@
 
 /* --- Main Content Area --- */
 .main-content {
-  flex-grow: 1;
   padding: 40px;
   overflow-y: auto;
 }
