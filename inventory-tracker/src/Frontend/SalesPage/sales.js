@@ -83,6 +83,7 @@ function Sales() {
   const [editingSaleId, setEditingSaleId] = useState(null);
   const [saleType, setSaleType] = useState('item'); // 'item' or 'recipe'
   const [selectedRecipeIngredients, setSelectedRecipeIngredients] = useState([]);
+  const [searchQuery, setSearchQuery] = useState(''); // search by item name or order ID
   const [formData, setFormData] = useState({
     item: '',
     quantity: '',
@@ -517,6 +518,15 @@ function Sales() {
     setFormData(updatedFormData);
   };
 
+  // Filter sales by item name OR order ID based on the search query
+  const filteredSales = salesData.filter(sale => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    const itemName = (sale.item_name || '').toLowerCase();
+    const orderId  = String(sale.id);
+    return itemName.includes(q) || orderId.includes(q);
+  });
+
   return (
     <div className="home-layout">
       <aside className="sidebar">
@@ -553,6 +563,20 @@ function Sales() {
                 />
                 <button className="action-btn edit-btn" onClick={handleEditClick}>Edit</button>
                 <button className="action-btn remove-btn" onClick={handleRemoveClick}>Remove</button>
+
+                {/* Search bar — filters by item name or order ID */}
+                <div className="sales-search-wrapper">
+                  <input
+                    type="text"
+                    className="sales-search-input"
+                    placeholder="Search by item or order ID…"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                  {searchQuery && (
+                    <button className="sales-search-clear" onClick={() => setSearchQuery('')}>✕</button>
+                  )}
+                </div>
               </div>
               <table className="inventory-table">
                 <thead>
@@ -560,7 +584,7 @@ function Sales() {
                     <th>
                       <input 
                         type="checkbox" 
-                        checked={selectedRows.size === salesData.length && salesData.length > 0}
+                        checked={selectedRows.size === filteredSales.length && filteredSales.length > 0}
                         onChange={handleSelectAll}
                         className="checkbox-header"
                       />
@@ -574,7 +598,7 @@ function Sales() {
                   </tr>
                 </thead>
                 <tbody>
-                  {salesData.map((sale, index) => (
+                  {filteredSales.map((sale, index) => (
                     <tr 
                       key={sale.id}
                       className={selectedRows.has(index) ? 'selected-row' : ''}
