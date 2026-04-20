@@ -1,7 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { recipesAPI, itemsAPI } from '../../api';
+import AddRecipeModal from './AddRecipeModal';
+import EditRecipeModal from './EditRecipeModal';
+import RemoveRecipeModal from './RemoveRecipeModal';
 import './recipe.css';
+import './RecipeCard.css';
+import './RecipeModal.css';
 
 function Recipe() {
   const navigate = useNavigate();
@@ -277,181 +282,44 @@ function Recipe() {
 
         {/* Add Recipe Modal */}
         {showAddModal && (
-          <div className="modal-overlay" onClick={() => { setShowAddModal(false); setIngredientSearch(''); }}>
-            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-              <h2>Add New Recipe</h2>
-              <div className="form-group">
-                <label>Recipe Name</label>
-                <input 
-                  type="text" 
-                  value={formData.name}
-                  onChange={(e) => setFormData({...formData, name: e.target.value})}
-                  placeholder="Enter recipe name"
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Select Ingredients from Inventory</label>
-                <input
-                  type="text"
-                  className="ingredient-search"
-                  placeholder="Search ingredients..."
-                  value={ingredientSearch}
-                  onChange={(e) => setIngredientSearch(e.target.value)}
-                />
-                <div className="ingredient-selector">
-                  {items
-                    .filter(item => item.name.toLowerCase().includes(ingredientSearch.toLowerCase()))
-                    .map((item) => (
-                      <button
-                        key={item.id}
-                        className="ingredient-btn"
-                        onClick={() => handleAddIngredient(item.name)}
-                        disabled={formData.ingredients.find(ing => ing.name === item.name)}
-                      >
-                        + {item.name}
-                      </button>
-                    ))}
-                  {items.filter(item => item.name.toLowerCase().includes(ingredientSearch.toLowerCase())).length === 0 && (
-                    <p className="ingredient-no-results">No ingredients match "{ingredientSearch}"</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label>Recipe Ingredients</label>
-                {formData.ingredients.length > 0 ? (
-                  <div className="ingredients-list">
-                    {formData.ingredients.map((ingredient, index) => (
-                      <div key={index} className="ingredient-row">
-                        <input
-                          type="number"
-                          min="1"
-                          value={ingredient.quantity}
-                          onChange={(e) => handleUpdateIngredientQuantity(index, e.target.value)}
-                          className="ingredient-quantity"
-                        />
-                        <span className="ingredient-name">{ingredient.name}</span>
-                        <button
-                          className="btn-remove-ingredient"
-                          onClick={() => handleRemoveIngredient(index)}
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p style={{color: '#6b7280', fontSize: '14px'}}>No ingredients added yet. Click buttons above to add ingredients.</p>
-                )}
-              </div>
-
-              <div className="modal-buttons">
-                <button className="btn-confirm" onClick={handleConfirmAdd}>Add Recipe</button>
-                <button className="btn-cancel" onClick={() => { setShowAddModal(false); setIngredientSearch(''); }}>Cancel</button>
-              </div>
-            </div>
-          </div>
+          <AddRecipeModal
+            items={items}
+            formData={formData}
+            setFormData={setFormData}
+            ingredientSearch={ingredientSearch}
+            setIngredientSearch={setIngredientSearch}
+            handleAddIngredient={handleAddIngredient}
+            handleRemoveIngredient={handleRemoveIngredient}
+            handleUpdateIngredientQuantity={handleUpdateIngredientQuantity}
+            handleConfirmAdd={handleConfirmAdd}
+            onClose={() => { setShowAddModal(false); setIngredientSearch(''); }}
+          />
         )}
 
         {/* Remove Recipe Modal */}
         {showRemoveModal && (
-          <div className="modal-overlay" onClick={() => setShowRemoveModal(false)}>
-            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-              <h2>Confirm Removal</h2>
-              <p>Are you sure you want to remove {selectedRecipes.size} recipe(ies)?</p>
-              <div className="items-to-remove">
-                {recipes.filter(r => selectedRecipes.has(r.id)).map((r) => (
-                  <div key={r.id} className="item-to-remove">
-                    • {r.name}
-                  </div>
-                ))}
-              </div>
-              <div className="modal-buttons">
-                <button className="btn-confirm btn-danger" onClick={handleConfirmRemove}>Remove {selectedRecipes.size} Recipe(ies)</button>
-                <button className="btn-cancel" onClick={() => setShowRemoveModal(false)}>Cancel</button>
-              </div>
-            </div>
-          </div>
+          <RemoveRecipeModal
+            selectedRecipes={selectedRecipes}
+            recipes={recipes}
+            handleConfirmRemove={handleConfirmRemove}
+            onClose={() => setShowRemoveModal(false)}
+          />
         )}
 
         {/* Edit Recipe Modal */}
         {showEditModal && (
-          <div className="modal-overlay" onClick={() => { setShowEditModal(false); setIngredientSearch(''); }}>
-            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-              <h2>Edit Recipe</h2>
-              <div className="form-group">
-                <label>Recipe Name</label>
-                <input 
-                  type="text" 
-                  value={formData.name}
-                  onChange={(e) => setFormData({...formData, name: e.target.value})}
-                  placeholder="Enter recipe name"
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Select Ingredients from Inventory</label>
-                <input
-                  type="text"
-                  className="ingredient-search"
-                  placeholder="Search ingredients..."
-                  value={ingredientSearch}
-                  onChange={(e) => setIngredientSearch(e.target.value)}
-                />
-                <div className="ingredient-selector">
-                  {items
-                    .filter(item => item.name.toLowerCase().includes(ingredientSearch.toLowerCase()))
-                    .map((item) => (
-                      <button
-                        key={item.id}
-                        className="ingredient-btn"
-                        onClick={() => handleAddIngredient(item.name)}
-                        disabled={formData.ingredients.find(ing => ing.name === item.name)}
-                      >
-                        + {item.name}
-                      </button>
-                    ))}
-                  {items.filter(item => item.name.toLowerCase().includes(ingredientSearch.toLowerCase())).length === 0 && (
-                    <p className="ingredient-no-results">No ingredients match "{ingredientSearch}"</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label>Recipe Ingredients</label>
-                {formData.ingredients.length > 0 ? (
-                  <div className="ingredients-list">
-                    {formData.ingredients.map((ingredient, index) => (
-                      <div key={index} className="ingredient-row">
-                        <input
-                          type="number"
-                          min="1"
-                          value={ingredient.quantity}
-                          onChange={(e) => handleUpdateIngredientQuantity(index, e.target.value)}
-                          className="ingredient-quantity"
-                        />
-                        <span className="ingredient-name">{ingredient.name}</span>
-                        <button
-                          className="btn-remove-ingredient"
-                          onClick={() => handleRemoveIngredient(index)}
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p style={{color: '#6b7280', fontSize: '14px'}}>No ingredients added yet. Click buttons above to add ingredients.</p>
-                )}
-              </div>
-
-              <div className="modal-buttons">
-                <button className="btn-confirm" onClick={handleConfirmEdit}>Update Recipe</button>
-                <button className="btn-cancel" onClick={() => { setShowEditModal(false); setIngredientSearch(''); }}>Cancel</button>
-              </div>
-            </div>
-          </div>
+          <EditRecipeModal
+            items={items}
+            formData={formData}
+            setFormData={setFormData}
+            ingredientSearch={ingredientSearch}
+            setIngredientSearch={setIngredientSearch}
+            handleAddIngredient={handleAddIngredient}
+            handleRemoveIngredient={handleRemoveIngredient}
+            handleUpdateIngredientQuantity={handleUpdateIngredientQuantity}
+            handleConfirmEdit={handleConfirmEdit}
+            onClose={() => { setShowEditModal(false); setIngredientSearch(''); }}
+          />
         )}
           </>
         )}

@@ -1,0 +1,86 @@
+/* ============================================================
+   SalesSearchableSelect.css
+   Styles for the SalesSearchableSelect dropdown component.
+   ============================================================ */
+
+.searchable-select {
+  position: relative;
+  width: 100%;
+}
+
+.searchable-select-input {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: white;
+  cursor: pointer;
+  min-height: 40px;
+  transition: border-color 0.2s;
+}
+
+.searchable-select-input:focus-within {
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.searchable-select-text {
+  border: none;
+  outline: none;
+  width: 100%;
+  font-size: 14px;
+  color: #374151;
+  background: transparent;
+}
+
+.searchable-select-value {
+  font-size: 14px;
+  color: #374151;
+  flex: 1;
+}
+
+.searchable-select-arrow {
+  color: #9ca3af;
+  font-size: 12px;
+  margin-left: 8px;
+}
+
+.searchable-select-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+  z-index: 1000;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.searchable-select-option {
+  padding: 10px 14px;
+  font-size: 14px;
+  color: #374151;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.searchable-select-option:hover,
+.searchable-select-option.selected {
+  background: #f3f4f6;
+  color: #4f46e5;
+}
+
+.searchable-select-no-results {
+  padding: 10px 14px;
+  font-size: 14px;
+  color: #9ca3af;
+  font-style: italic;
+}

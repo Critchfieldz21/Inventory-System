@@ -1,71 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { transactionsAPI, itemsAPI, recipesAPI } from '../../api';
+import AddSaleModal from './AddSaleModal';
+import EditSaleModal from './EditSaleModal';
+import RemoveSaleModal from './RemoveSaleModal';
 import './sales.css';
-
-function SearchableSelect({ options, value, onChange, placeholder, displayKey, valueKey, subKey }) {
-  const [query, setQuery] = useState('');
-  const [open, setOpen] = useState(false);
-  const ref = useRef(null);
-
-  const selected = options.find(o => String(o[valueKey]) === String(value));
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
-
-  const filtered = options.filter(o =>
-    o[displayKey].toLowerCase().includes(query.toLowerCase())
-  );
-
-  const handleSelect = (option) => {
-    onChange(option[valueKey]);
-    setQuery('');
-    setOpen(false);
-  };
-
-  return (
-    <div className="searchable-select" ref={ref}>
-      <div className="searchable-select-input" onClick={() => setOpen(true)}>
-        {!open && selected ? (
-          <span className="searchable-select-value">
-            {selected[displayKey]}{subKey ? ` (Stock: ${selected[subKey]})` : ''}
-          </span>
-        ) : (
-          <input
-            autoFocus={open}
-            type="text"
-            value={query}
-            onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
-            placeholder={selected ? selected[displayKey] : placeholder}
-            className="searchable-select-text"
-          />
-        )}
-        <span className="searchable-select-arrow">▾</span>
-      </div>
-      {open && (
-        <ul className="searchable-select-dropdown">
-          {filtered.length === 0 ? (
-            <li className="searchable-select-no-results">No results found</li>
-          ) : (
-            filtered.map(option => (
-              <li
-                key={option[valueKey]}
-                className={`searchable-select-option ${String(option[valueKey]) === String(value) ? 'selected' : ''}`}
-                onMouseDown={() => handleSelect(option)}
-              >
-                {option[displayKey]}{subKey ? ` (Stock: ${option[subKey]})` : ''}
-              </li>
-            ))
-          )}
-        </ul>
-      )}
-    </div>
-  );
-}
+import './SalesTable.css';
+import './SalesModal.css';
+import './SalesSearchableSelect.css';
 
 function Sales() {
   const navigate = useNavigate();
@@ -637,236 +579,42 @@ function Sales() {
 
         {/* Add Sale Modal */}
         {showAddModal && (
-          <div className="modal-overlay" onClick={() => setShowAddModal(false)}>
-            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-              <h2>Add New Sale</h2>
-              <div className="form-group">
-                <label>Sale Type</label>
-                <div className="sale-type-toggle">
-                  <button 
-                    className={`toggle-btn ${saleType === 'item' ? 'active' : ''}`}
-                    onClick={() => {
-                      setSaleType('item');
-                      setFormData({ item: '', quantity: '', total: '', status: 'Completed' });
-                      setSelectedRecipeIngredients([]);
-                    }}
-                  >
-                    Item
-                  </button>
-                  <button 
-                    className={`toggle-btn ${saleType === 'recipe' ? 'active' : ''}`}
-                    onClick={() => {
-                      setSaleType('recipe');
-                      setFormData({ item: '', quantity: '', total: '', status: 'Completed' });
-                      setSelectedRecipeIngredients([]);
-                    }}
-                  >
-                    Recipe
-                  </button>
-                </div>
-              </div>
-
-              {saleType === 'item' ? (
-                <>
-                  <div className="form-group">
-                    <label>Item</label>
-                    <SearchableSelect
-                      options={items}
-                      value={formData.item}
-                      onChange={(val) => handleFormChange({ target: { name: 'item', value: val } })}
-                      placeholder="Search for an item..."
-                      displayKey="name"
-                      valueKey="id"
-                      subKey="stock"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Quantity</label>
-                    <input 
-                      type="number" 
-                      name="quantity"
-                      value={formData.quantity}
-                      onChange={handleFormChange}
-                      placeholder="Enter quantity"
-                    />
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="form-group">
-                    <label>Recipe</label>
-                    <SearchableSelect
-                      options={recipes}
-                      value={formData.item}
-                      onChange={(val) => handleRecipeChange(val)}
-                      placeholder="Search for a recipe..."
-                      displayKey="name"
-                      valueKey="id"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Recipe Quantity</label>
-                    <input 
-                      type="number" 
-                      name="quantity"
-                      value={formData.quantity}
-                      onChange={handleFormChange}
-                      placeholder="How many recipes to make?"
-                      min="1"
-                    />
-                  </div>
-                  {selectedRecipeIngredients !== undefined && selectedRecipeIngredients !== null && (
-                    <div className="form-group">
-                      <label>Ingredients Required:</label>
-                      <div className="ingredients-list">
-                        {(() => {
-                          const ingredientsList = parseRecipeIngredients(selectedRecipeIngredients);
-                          
-                          if (ingredientsList.length === 0) {
-                            return <div className="no-ingredients">No ingredients added to this recipe</div>;
-                          }
-                          return ingredientsList.map((ing, index) => {
-                            // Case-insensitive ingredient matching
-                            const ingredientItem = items.find(item => 
-                              item.name.toLowerCase() === ing.name.toLowerCase()
-                            );
-                            const requiredQty = ing.quantity * (parseInt(formData.quantity) || 1);
-                            const hasEnough = ingredientItem && requiredQty <= ingredientItem.stock;
-                            return (
-                              <div key={index} className={`ingredient-item ${hasEnough ? '' : 'insufficient'}`}>
-                                <span>{requiredQty}x {ing.name}</span>
-                                <span className={`ingredient-stock ${!hasEnough ? 'warning' : ''}`}>
-                                  Available: {ingredientItem?.stock || 0}
-                                </span>
-                              </div>
-                            );
-                          });
-                        })()}
-                      </div>
-                    </div>
-                  )}
-                </>
-              )}
-
-              <div className="form-group">
-                <label>Total Price (Auto-calculated)</label>
-                <input 
-                  type="number" 
-                  name="total"
-                  value={formData.total}
-                  onChange={handleFormChange}
-                  placeholder="Auto-calculated"
-                  step="0.01"
-                  disabled={true}
-                />
-              </div>
-              <div className="form-group">
-                <label>Status</label>
-                <select 
-                  name="status"
-                  value={formData.status}
-                  onChange={handleFormChange}
-                >
-                  <option value="Pending">Pending</option>
-                  <option value="Completed">Completed</option>
-                </select>
-              </div>
-              <div className="modal-buttons">
-                <button className="btn-confirm" onClick={handleConfirmAdd}>Add Sale</button>
-                <button className="btn-cancel" onClick={() => setShowAddModal(false)}>Cancel</button>
-              </div>
-            </div>
-          </div>
+          <AddSaleModal
+            items={items}
+            recipes={recipes}
+            formData={formData}
+            setFormData={setFormData}
+            saleType={saleType}
+            setSaleType={setSaleType}
+            selectedRecipeIngredients={selectedRecipeIngredients}
+            setSelectedRecipeIngredients={setSelectedRecipeIngredients}
+            handleConfirmAdd={handleConfirmAdd}
+            handleFormChange={handleFormChange}
+            handleRecipeChange={handleRecipeChange}
+            parseRecipeIngredients={parseRecipeIngredients}
+            onClose={() => setShowAddModal(false)}
+          />
         )}
 
         {/* Remove Sale Modal */}
         {showRemoveModal && (
-          <div className="modal-overlay" onClick={() => setShowRemoveModal(false)}>
-            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-              <h2>Confirm Removal</h2>
-              <p>Are you sure you want to remove {selectedRows.size} sale(s)?</p>
-              <div className="items-to-remove">
-                {Array.from(selectedRows).map((index) => (
-                  <div key={salesData[index]?.id} className="item-to-remove">
-                    • Order ID: {salesData[index]?.id} - {salesData[index]?.item_name || salesData[index]?.item}
-                  </div>
-                ))}
-              </div>
-              <div className="modal-buttons">
-                <button className="btn-confirm btn-danger" onClick={handleConfirmRemove}>Remove {selectedRows.size} Sale(s)</button>
-                <button className="btn-cancel" onClick={() => setShowRemoveModal(false)}>Cancel</button>
-              </div>
-            </div>
-          </div>
+          <RemoveSaleModal
+            selectedRows={selectedRows}
+            salesData={salesData}
+            handleConfirmRemove={handleConfirmRemove}
+            onClose={() => setShowRemoveModal(false)}
+          />
         )}
 
         {/* Edit Sale Modal */}
         {showEditModal && (
-          <div className="modal-overlay" onClick={() => setShowEditModal(false)}>
-            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-              <h2>Edit Sale</h2>
-              <div className="form-group">
-                <label>Item</label>
-                <select 
-                  name="item"
-                  value={formData.item}
-                  onChange={handleFormChange}
-                >
-                  <option value="">Select an item</option>
-                  {items.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Quantity</label>
-                <input 
-                  type="number" 
-                  name="quantity"
-                  value={formData.quantity}
-                  onChange={handleFormChange}
-                  placeholder="Enter quantity"
-                />
-              </div>
-              <div className="form-group">
-                <label>Total Price</label>
-                <input 
-                  type="number" 
-                  name="total"
-                  value={formData.total}
-                  onChange={handleFormChange}
-                  placeholder="Total price"
-                  step="0.01"
-                />
-              </div>
-              <div className="form-group">
-                <label>Status</label>
-                <select 
-                  name="status"
-                  value={formData.status}
-                  onChange={handleFormChange}
-                >
-                  <option value="Pending">Pending</option>
-                  <option value="Completed">Completed</option>
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Date & Time</label>
-                <input
-                  type="datetime-local"
-                  name="date"
-                  value={formData.date || ''}
-                  onChange={handleFormChange}
-                />
-              </div>
-              <div className="modal-buttons">
-                <button className="btn-confirm" onClick={handleConfirmEdit}>Update Sale</button>
-                <button className="btn-cancel" onClick={() => setShowEditModal(false)}>Cancel</button>
-              </div>
-            </div>
-          </div>
+          <EditSaleModal
+            items={items}
+            formData={formData}
+            handleFormChange={handleFormChange}
+            handleConfirmEdit={handleConfirmEdit}
+            onClose={() => setShowEditModal(false)}
+          />
         )}
       </main>
     </div>
