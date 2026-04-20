@@ -9,7 +9,9 @@ function Home() {
   const [financialData, setFinancialData] = useState({ revenue: 0, expenses: 0, profit: 0 });
   const [lowStockItems, setLowStockItems] = useState([]);
   const [topItems, setTopItems] = useState([]);
-  const [weeklyData, setWeeklyData] = useState([]);
+  const [weeklyData, setWeeklyData]   = useState([]);
+  const [monthlyData, setMonthlyData] = useState([]);
+  const [chartView, setChartView]     = useState('week'); // 'week' | 'month'
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -18,12 +20,13 @@ function Home() {
       try {
         setLoading(true);
         // Fetch all data in parallel
-        const [dashboard, lowStock, weeklySales, weeklyExpenses, topItemsSold] = await Promise.all([
+        const [dashboard, lowStock, weeklySales, weeklyExpenses, topItemsSold, monthlyExpenses] = await Promise.all([
           analyticsAPI.getDashboardSummary(),
           analyticsAPI.getLowStockItems(),
           analyticsAPI.getWeeklySalesData(),
           analyticsAPI.getWeeklyExpensesData(),
-          analyticsAPI.getTopItemsSold()
+          analyticsAPI.getTopItemsSold(),
+          analyticsAPI.getMonthlyExpensesData(),
         ]);
         
         const revenue = dashboard.total_revenue || 0;
@@ -67,6 +70,9 @@ function Home() {
           { name: 'Fri', profit: 0 },
           { name: 'Sat', profit: 0 },
         ]);
+
+        // Monthly expense data — one entry per calendar day of the current month
+        setMonthlyData(Array.isArray(monthlyExpenses) ? monthlyExpenses : []);
         
         setError(null);
       } catch (err) {
@@ -136,27 +142,77 @@ function Home() {
 
             {/* --- Top Section: Trend Graph --- */}
             <div className="chart-container">
-              <h3 className="card-title">Weekly Profits </h3>
+              {/* Chart header with title + Week / Month toggle */}
+              <div className="chart-header">
+                <h3 className="card-title">
+                  {chartView === 'week' ? 'Weekly Profits' : 'Monthly Profits'}
+                </h3>
+                <div className="chart-toggle">
+                  <button
+                    className={`toggle-btn ${chartView === 'week' ? 'active' : ''}`}
+                    onClick={() => setChartView('week')}
+                  >
+                    Week
+                  </button>
+                  <button
+                    className={`toggle-btn ${chartView === 'month' ? 'active' : ''}`}
+                    onClick={() => setChartView('month')}
+                  >
+                    Month
+                  </button>
+                </div>
+              </div>
+
               <ResponsiveContainer width="100%" height={300}>
-                <AreaChart data={weeklyData}>
-                  <defs>
-                    <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#1ba827" stopOpacity={0.8}/>
-                      <stop offset="95%" stopColor="#1ba827" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} />
-                  <YAxis axisLine={false} tickLine={false} />
-                  <Tooltip />
-                  <Area 
-                    type="monotone" 
-                    dataKey="profit" 
-                    stroke="#1ba827" 
-                    fillOpacity={1} 
-                    fill="url(#colorProfit)" 
-                  />
-                </AreaChart>
+                {chartView === 'week' ? (
+                  /* Weekly profit view */
+                  <AreaChart data={weeklyData}>
+                    <defs>
+                      <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#1ba827" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="#1ba827" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} />
+                    <YAxis axisLine={false} tickLine={false} />
+                    <Tooltip formatter={(val) => [`$${val.toFixed(2)}`, 'Profit']} />
+                    <Area
+                      type="monotone"
+                      dataKey="profit"
+                      stroke="#1ba827"
+                      fillOpacity={1}
+                      fill="url(#colorProfit)"
+                    />
+                  </AreaChart>
+                ) : (
+                  /* Monthly profits view — one point per calendar day */
+                  <AreaChart data={monthlyData}>
+                    <defs>
+                      <linearGradient id="colorMonthlyProfit" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#1ba827" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="#1ba827" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
+                    <XAxis
+                      dataKey="name"
+                      axisLine={false}
+                      tickLine={false}
+                      interval={Math.floor(monthlyData.length / 7)} // show ~7 labels so they don't crowd
+                      tick={{ fontSize: 11 }}
+                    />
+                    <YAxis axisLine={false} tickLine={false} />
+                    <Tooltip formatter={(val) => [`$${val.toFixed(2)}`, 'Profit']} />
+                    <Area
+                      type="monotone"
+                      dataKey="profit"
+                      stroke="#1ba827"
+                      fillOpacity={1}
+                      fill="url(#colorMonthlyProfit)"
+                    />
+                  </AreaChart>
+                )}
               </ResponsiveContainer>
             </div>
 

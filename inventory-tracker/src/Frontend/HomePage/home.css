@@ -168,11 +168,46 @@
   margin-bottom: 30px;
 }
 
+/* Title row inside the chart card — title on left, toggle on right */
+.chart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
 .card-title {
   font-size: 16px;
   font-weight: 600;
   color: var(--text-main);
-  margin-bottom: 20px;
+  margin: 0;
+}
+
+/* Week / Month pill toggle */
+.chart-toggle {
+  display: flex;
+  gap: 4px;
+  background: #f1f5f9;
+  border-radius: 8px;
+  padding: 4px;
+}
+
+.toggle-btn {
+  padding: 5px 14px;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  background: transparent;
+  color: #64748b;
+  transition: background 0.15s, color 0.15s;
+}
+
+.toggle-btn.active {
+  background: white;
+  color: #1e293b;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
 }
 
 /* --- Bottom Lists Row --- */

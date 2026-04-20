@@ -406,6 +406,71 @@ export const analyticsAPI = {
     }
   },
 
+  // Get monthly profit data — revenue minus purchase expenses per calendar day
+  // month: 0-based JS month (default = current month), year: full year (default = current year)
+  getMonthlyExpensesData: async (month, year) => {
+    try {
+      const now = new Date();
+      const targetMonth = month !== undefined ? month : now.getMonth();
+      const targetYear  = year  !== undefined ? year  : now.getFullYear();
+
+      // Fetch sales and purchase expenses in parallel
+      const [salesRaw, expensesRaw] = await Promise.all([
+        transactionsAPI.getSales(),
+        expensesAPI.getAll(),
+      ]);
+
+      const salesArray    = Array.isArray(salesRaw)    ? salesRaw    : (salesRaw.results    || []);
+      const expensesArray = Array.isArray(expensesRaw) ? expensesRaw : (expensesRaw.results || []);
+
+      // How many days are in the target month?
+      const daysInMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
+
+      // Zero-filled maps keyed by day-of-month (1 … daysInMonth)
+      const dailyRevenue  = {};
+      const dailyExpenses = {};
+      for (let d = 1; d <= daysInMonth; d++) {
+        dailyRevenue[d]  = 0;
+        dailyExpenses[d] = 0;
+      }
+
+      // Accumulate completed sales revenue by day
+      salesArray
+        .filter(s => s.status === 'Completed')
+        .forEach(sale => {
+          try {
+            const d = new Date(sale.date);
+            if (d.getFullYear() === targetYear && d.getMonth() === targetMonth) {
+              dailyRevenue[d.getDate()] += parseFloat(sale.total || 0);
+            }
+          } catch (e) { /* skip bad dates */ }
+        });
+
+      // Accumulate purchase expenses by day
+      expensesArray.forEach(expense => {
+        try {
+          const d = new Date(expense.date);
+          if (d.getFullYear() === targetYear && d.getMonth() === targetMonth) {
+            dailyExpenses[d.getDate()] += parseFloat(expense.amount || 0);
+          }
+        } catch (e) { /* skip bad dates */ }
+      });
+
+      // Return profit (revenue - expenses) per day
+      const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      return Array.from({ length: daysInMonth }, (_, i) => {
+        const day = i + 1;
+        return {
+          name:   `${monthNames[targetMonth]} ${day}`,
+          profit: parseFloat((dailyRevenue[day] - dailyExpenses[day]).toFixed(2)),
+        };
+      });
+    } catch (error) {
+      console.error('Error fetching monthly profit data:', error);
+      throw error;
+    }
+  },
+
   // Get top 3 items sold
   getTopItemsSold: async () => {
     try {
