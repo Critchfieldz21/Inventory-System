@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Item, Recipe, Sales
+from .models import Item, Recipe, Sales, Expense
 import json
 
 
@@ -66,3 +66,16 @@ class SalesSerializer(serializers.ModelSerializer):
         if not validated_data.get('date'):
             validated_data['date'] = timezone.now()
         return super().create(validated_data)
+
+
+class ExpenseSerializer(serializers.ModelSerializer):
+    item_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Expense
+        fields = ['id', 'item', 'item_name', 'quantity', 'cost_price_at_time', 'amount', 'description', 'date']
+        read_only_fields = ['date']
+
+    def get_item_name(self, obj):
+        """Return the name of the item this expense is for"""
+        return obj.item.name

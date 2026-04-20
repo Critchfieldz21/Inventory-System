@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { itemsAPI } from '../../api';
+import { itemsAPI, expensesAPI } from '../../api';
 import SearchableSelect from './SearchableSelect';
 import './Modal.css';
 
@@ -64,12 +64,24 @@ function AddItemModal({ inventory, categories, onCategoryAdded, onSave, onClose 
       if (existingItem && !isCreatingNewItem) {
         // --- Mode 1: Add stock to an existing item ---
         // We send a PATCH/PUT to update only the stock count (add the entered quantity on top)
+        const quantityAdded = parseInt(formData.stock);
+        const itemCostPrice = parseFloat(String(existingItem.cost_price).replace('$', ''));
+
         const updatedItem = await itemsAPI.update(existingItem.id, {
           name: existingItem.name,
           category: existingItem.category,
-          stock: existingItem.stock + parseInt(formData.stock), // add new stock on top of current
-          cost_price: parseFloat(existingItem.cost_price.replace('$', '')),
-          price: existingItem.price.replace('$', '')
+          stock: existingItem.stock + quantityAdded, // add new stock on top of current
+          cost_price: itemCostPrice,
+          price: String(existingItem.price).replace('$', '')
+        });
+
+        // Record the purchase expense: cost_price × quantity restocked
+        await expensesAPI.create({
+          item: existingItem.id,
+          quantity: quantityAdded,
+          cost_price_at_time: itemCostPrice,
+          amount: parseFloat((itemCostPrice * quantityAdded).toFixed(2)),
+          description: `Restock — ${existingItem.name} × ${quantityAdded}`,
         });
 
         // Send the formatted updated item back to the parent so the table refreshes
@@ -84,12 +96,23 @@ function AddItemModal({ inventory, categories, onCategoryAdded, onSave, onClose 
 
       } else {
         // --- Mode 2: Create a brand-new item ---
+        const quantity = parseInt(formData.stock);
+
         const newItem = await itemsAPI.create({
           name: formData.name,
           category: formData.category,
-          stock: parseInt(formData.stock),
+          stock: quantity,
           cost_price: costPrice,
           price: sellingPrice
+        });
+
+        // Record the purchase expense: cost_price × initial stock
+        await expensesAPI.create({
+          item: newItem.id,
+          quantity: quantity,
+          cost_price_at_time: costPrice,
+          amount: parseFloat((costPrice * quantity).toFixed(2)),
+          description: `Initial stock — ${formData.name} × ${quantity}`,
         });
 
         // Send the formatted new item back to the parent so it appears in the table

@@ -224,16 +224,46 @@ export const transactionsAPI = {
   },
 };
 
+// ============= EXPENSES API =============
+// Records purchase/restock expenses when items are added to inventory
+
+export const expensesAPI = {
+  // Get all purchase expenses (most recent first)
+  getAll: async () => {
+    return apiRequest('/expenses/');
+  },
+
+  // Create a new purchase expense
+  // Expected shape: { item, quantity, cost_price_at_time, amount, description? }
+  create: async (expenseData) => {
+    return apiRequest('/expenses/', {
+      method: 'POST',
+      body: JSON.stringify(expenseData),
+    });
+  },
+
+  // Get the total sum of all purchase expenses
+  getTotal: async () => {
+    return apiRequest('/expenses/total/');
+  },
+
+  // Get all expenses for a specific item
+  getByItem: async (itemId) => {
+    return apiRequest(`/expenses/by_item/?item_id=${itemId}`);
+  },
+};
+
 // ============= ANALYTICS API =============
 
 export const analyticsAPI = {
   // Get dashboard summary
   getDashboardSummary: async () => {
     try {
-      const [items, recipes, sales] = await Promise.all([
+      const [items, recipes, sales, expenseTotal] = await Promise.all([
         itemsAPI.getAll(),
         recipesAPI.getAll(),
         transactionsAPI.getSales(),
+        expensesAPI.getTotal(),
       ]);
 
       // Handle both paginated and direct array responses
@@ -244,19 +274,10 @@ export const analyticsAPI = {
       // Calculate total revenue from completed sales
       const completedSales = salesArray.filter(s => s.status === 'Completed');
       const totalRevenue = completedSales.reduce((sum, s) => sum + parseFloat(s.total || 0), 0);
-      
-      // Calculate total expenses based on cost price of items sold
-      const totalExpenses = completedSales.reduce((sum, sale) => {
-        // Find the item for this sale
-        const item = itemsArray.find(i => i.id === sale.item);
-        if (item) {
-          const costPerUnit = parseFloat(item.cost_price || 0);
-          const totalCost = costPerUnit * sale.quantity;
-          return sum + totalCost;
-        }
-        return sum;
-      }, 0);
-      
+
+      // Total expenses = sum of all recorded purchase expenses (cost_price × quantity when buying stock)
+      const totalExpenses = parseFloat(expenseTotal.total_expenses || 0);
+
       return {
         total_revenue: totalRevenue,
         total_expenses: totalExpenses,
@@ -350,46 +371,30 @@ export const analyticsAPI = {
     }
   },
 
-  // Get weekly expenses data (cost of goods sold)
+  // Get weekly expenses data (purchase costs when items were bought/restocked)
   getWeeklyExpensesData: async () => {
     try {
-      const [sales, items] = await Promise.all([
-        transactionsAPI.getSales(),
-        itemsAPI.getAll(),
-      ]);
-      
-      // Handle both paginated and direct array responses
-      const salesArray = Array.isArray(sales) ? sales : (sales.results || []);
-      const itemsArray = Array.isArray(items) ? items : (items.results || []);
-      
-      // Get completed sales only
-      const completedSales = salesArray.filter(s => s.status === 'Completed');
-      
+      const expenses = await expensesAPI.getAll();
+      const expensesArray = Array.isArray(expenses) ? expenses : (expenses.results || []);
+
       // Create a map of days of the week
       const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
       const weeklyData = {};
-      
+
       // Initialize all days with 0 expenses
-      daysOfWeek.forEach(day => {
-        weeklyData[day] = 0;
-      });
-      
-      // Calculate expenses for each day based on cost price
-      completedSales.forEach(sale => {
+      daysOfWeek.forEach(day => { weeklyData[day] = 0; });
+
+      // Sum expenses by day of week
+      expensesArray.forEach(expense => {
         try {
-          const saleDate = new Date(sale.date);
-          const dayName = daysOfWeek[saleDate.getDay()];
-          const item = itemsArray.find(i => i.id === sale.item);
-          if (item) {
-            const costPerUnit = parseFloat(item.cost_price || 0);
-            const totalCost = costPerUnit * sale.quantity;
-            weeklyData[dayName] += totalCost;
-          }
+          const expDate = new Date(expense.date);
+          const dayName = daysOfWeek[expDate.getDay()];
+          weeklyData[dayName] += parseFloat(expense.amount || 0);
         } catch (e) {
-          // Skip sales with invalid dates
+          // Skip entries with invalid dates
         }
       });
-      
+
       // Format for chart
       return daysOfWeek.map(day => ({
         name: day,

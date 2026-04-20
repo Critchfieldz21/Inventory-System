@@ -46,6 +46,23 @@ class Sales(models.Model):
         return f"{self.name or self.item.name} - {self.total}"
 
 
+class Expense(models.Model):
+    """
+    Records a purchase/restock expense.
+    Created whenever an item is added to inventory (new item or restock).
+    amount = cost_price_at_time × quantity
+    """
+    item = models.ForeignKey(Item, on_delete=models.CASCADE, related_name='expenses')
+    quantity = models.IntegerField()
+    cost_price_at_time = models.DecimalField(max_digits=10, decimal_places=2)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)  # cost_price × quantity
+    description = models.CharField(max_length=255, null=True, blank=True)
+    date = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.item.name} — {self.quantity} units — ${self.amount}"
+
+
 # Signal to deduct stock when a sale is created
 @receiver(post_save, sender=Sales)
 def deduct_stock_on_sale(sender, instance, created, **kwargs):

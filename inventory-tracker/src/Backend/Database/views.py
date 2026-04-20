@@ -3,8 +3,8 @@ from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.response import Response
 from django.db.models import Sum
-from .models import Item, Recipe, Sales
-from .serializers import ItemSerializer, RecipeSerializer, SalesSerializer
+from .models import Item, Recipe, Sales, Expense
+from .serializers import ItemSerializer, RecipeSerializer, SalesSerializer, ExpenseSerializer
 from .xlsx_imports import (
     import_items_from_xlsx,
     import_recipes_from_xlsx,
@@ -149,3 +149,29 @@ class SalesViewSet(viewsets.ModelViewSet):
             return Response(result, status=status.HTTP_200_OK)
         except Exception as exc:
             return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ExpenseViewSet(viewsets.ModelViewSet):
+    """
+    CRUD for purchase/restock expenses.
+    Created from the frontend whenever items are added to inventory.
+    """
+    queryset = Expense.objects.all().order_by('-date')
+    serializer_class = ExpenseSerializer
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
+
+    @action(detail=False, methods=['get'])
+    def total(self, request):
+        """Return the sum of all purchase expenses"""
+        total = Expense.objects.aggregate(total=Sum('amount'))['total'] or 0
+        return Response({'total_expenses': float(total)})
+
+    @action(detail=False, methods=['get'])
+    def by_item(self, request):
+        """Return all expenses for a specific item (pass ?item_id=<id>)"""
+        item_id = request.query_params.get('item_id')
+        if not item_id:
+            return Response({'detail': 'item_id query param required.'}, status=status.HTTP_400_BAD_REQUEST)
+        expenses = Expense.objects.filter(item_id=item_id).order_by('-date')
+        serializer = self.get_serializer(expenses, many=True)
+        return Response(serializer.data)
