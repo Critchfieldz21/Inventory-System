@@ -1,8 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { analyticsAPI } from '../../api';
+import FinancialSummary from './FinancialSummary';
+import DashboardChart from './DashboardChart';
+import DashboardLists from './DashboardLists';
 import './home.css';
+import './Sidebar.css';
+import './FinancialSummary.css';
+import './DashboardChart.css';
+import './DashboardLists.css';
 
 function Home() {
   const navigate = useNavigate();
@@ -125,145 +131,14 @@ function Home() {
           <div className="error-message">{error}</div>
         ) : (
           <>
-            <div className="financial-summary">
-              <div className="financial-card revenue">
-                <h4 className="financial-label">Total Revenue</h4>
-                <p className="financial-amount">${parseFloat(financialData.revenue).toFixed(2)}</p>
-              </div>
-              <div className="financial-card expenses">
-                <h4 className="financial-label">Total Expenses</h4>
-                <p className="financial-amount">${parseFloat(financialData.expenses).toFixed(2)}</p>
-              </div>
-              <div className="financial-card profit">
-                <h4 className="financial-label">Total Profit</h4>
-                <p className="financial-amount">${parseFloat(financialData.profit).toFixed(2)}</p>
-              </div>
-            </div>
-
-            {/* --- Top Section: Trend Graph --- */}
-            <div className="chart-container">
-              {/* Chart header with title + Week / Month toggle */}
-              <div className="chart-header">
-                <h3 className="card-title">
-                  {chartView === 'week' ? 'Weekly Profits' : 'Monthly Profits'}
-                </h3>
-                <div className="chart-toggle">
-                  <button
-                    className={`toggle-btn ${chartView === 'week' ? 'active' : ''}`}
-                    onClick={() => setChartView('week')}
-                  >
-                    Week
-                  </button>
-                  <button
-                    className={`toggle-btn ${chartView === 'month' ? 'active' : ''}`}
-                    onClick={() => setChartView('month')}
-                  >
-                    Month
-                  </button>
-                </div>
-              </div>
-
-              <ResponsiveContainer width="100%" height={300}>
-                {chartView === 'week' ? (
-                  /* Weekly profit view */
-                  <AreaChart data={weeklyData}>
-                    <defs>
-                      <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#1ba827" stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor="#1ba827" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
-                    <XAxis dataKey="name" axisLine={false} tickLine={false} />
-                    <YAxis axisLine={false} tickLine={false} />
-                    <Tooltip formatter={(val) => [`$${val.toFixed(2)}`, 'Profit']} />
-                    <Area
-                      type="monotone"
-                      dataKey="profit"
-                      stroke="#1ba827"
-                      fillOpacity={1}
-                      fill="url(#colorProfit)"
-                    />
-                  </AreaChart>
-                ) : (
-                  /* Monthly profits view — one point per calendar day */
-                  <AreaChart data={monthlyData}>
-                    <defs>
-                      <linearGradient id="colorMonthlyProfit" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#1ba827" stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor="#1ba827" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
-                    <XAxis
-                      dataKey="name"
-                      axisLine={false}
-                      tickLine={false}
-                      interval={Math.floor(monthlyData.length / 7)} // show ~7 labels so they don't crowd
-                      tick={{ fontSize: 11 }}
-                    />
-                    <YAxis axisLine={false} tickLine={false} />
-                    <Tooltip formatter={(val) => [`$${val.toFixed(2)}`, 'Profit']} />
-                    <Area
-                      type="monotone"
-                      dataKey="profit"
-                      stroke="#1ba827"
-                      fillOpacity={1}
-                      fill="url(#colorMonthlyProfit)"
-                    />
-                  </AreaChart>
-                )}
-              </ResponsiveContainer>
-            </div>
-
-            {/* --- Bottom Section: Lists Row --- */}
-            <div className="bottom-lists-row">
-              
-              {/* Top 3 Items List */}
-              <div className="status-card">
-                <div className="card-header">
-                  <h3>Top 3 Items Sold</h3>
-                </div>
-                <ul className="status-list">
-                  {topItems.length > 0 ? (
-                    topItems.map((item, index) => (
-                      <li key={index} className="list-item">
-                        <span>{index + 1}. {item.itemName}</span> 
-                        <strong>{item.quantity} sold</strong>
-                      </li>
-                    ))
-                  ) : (
-                    <li className="list-item">
-                      <span>No sales data available</span>
-                    </li>
-                  )}
-                </ul>
-              </div>
-
-              {/* Low Stock Items List */}
-              <div className="status-card">
-                <div className="card-header">
-                  <h3>Low Stock Alerts</h3>
-                </div>
-                <ul className="status-list">
-                  {lowStockItems.length > 0 ? (
-                    lowStockItems.map((item, index) => (
-                      <li key={item.id} className="list-item">
-                        <span>{item.name}</span> 
-                        <span className={`stock-tag ${item.stock < 10 ? 'critical' : 'warning'}`}>
-                          {item.stock} left
-                        </span>
-                      </li>
-                    ))
-                  ) : (
-                    <li className="list-item">
-                      <span>No low stock items</span>
-                    </li>
-                  )}
-                </ul>
-              </div>
-
-            </div>
+            <FinancialSummary financialData={financialData} />
+            <DashboardChart
+              chartView={chartView}
+              setChartView={setChartView}
+              weeklyData={weeklyData}
+              monthlyData={monthlyData}
+            />
+            <DashboardLists topItems={topItems} lowStockItems={lowStockItems} />
           </>
         )}
       </main>
