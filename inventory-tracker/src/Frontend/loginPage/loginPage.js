@@ -25,46 +25,53 @@ function LoginPage() {
 
   return (
     <div className="login-container">
-      <div className="login-box">
-        <div className="header">
-          <img src={logo} className="login-logo" alt="logo" />
-        </div>
-        <form className="login-form" onSubmit={handleLogin}>
-          <div className="input-group">
-            <label>Username</label>
-            <input 
-              type="text" 
-              placeholder="Username" 
-              required 
-              value={username} 
-              onChange={(e) => setUsername(e.target.value)} 
-            />
-          </div>
-          <div className="input-group">
-            <label>Password</label>
-            <input 
-              type="password" 
-              placeholder="Password" 
-              required 
-              value={password} 
-              onChange={(e) => setPassword(e.target.value)} 
-            />
-          </div>
-          
-          <button type="submit" className="login-button">Sign In</button>
 
-          {/* Forgot Login Link placed under the button */}
-          <div className="forgot-login-container" style={{ textAlign: 'center', marginTop: '15px' }}>
-            <a 
-              href="/forgot-password" 
-              onClick={handleForgotLogin}
-              style={{ fontSize: '0.85rem', color: '#007bff', textDecoration: 'none' }}
-            >
-              Forgot Login?
-            </a>
-          </div>
-        </form>
+      {/* --- Left branding panel --- */}
+      <div className="login-brand">
+        <img src={logo} className="login-logo" alt="logo" />
+        <h1>Inventory Tracker</h1>
+        <p>Manage your stock, sales, and recipes all in one place.</p>
       </div>
+
+      {/* --- Right form panel --- */}
+      <div className="login-form-panel">
+        <div className="login-box">
+          <h2>Welcome back</h2>
+          <p className="login-subtitle">Sign in to your account to continue.</p>
+
+          <form className="login-form" onSubmit={handleLogin}>
+            <div className="input-group">
+              <label>Username</label>
+              <input
+                type="text"
+                placeholder="Enter your username"
+                required
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+              />
+            </div>
+            <div className="input-group">
+              <label>Password</label>
+              <input
+                type="password"
+                placeholder="Enter your password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+
+            <button type="submit" className="login-button">Sign In</button>
+
+            <div className="forgot-login-container">
+              <a href="/forgot-password" onClick={handleForgotLogin}>
+                Forgot your login?
+              </a>
+            </div>
+          </form>
+        </div>
+      </div>
+
     </div>
   );
 }
