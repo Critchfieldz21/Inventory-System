@@ -48,7 +48,7 @@ function AddSaleModal({
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-content add-sale-modal-content" onClick={(e) => e.stopPropagation()}>
         <h2>Add New Sale</h2>
 
         {/* ── Sale Type Toggle ── */}
