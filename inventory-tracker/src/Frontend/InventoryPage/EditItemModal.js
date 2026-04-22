@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { itemsAPI } from '../../api';
 import SearchableSelect from './SearchableSelect';
 import './Modal.css';
@@ -96,10 +96,12 @@ function EditItemModal({ item, categories, onCategoryAdded, onSave, onClose }) {
     setShowNewCategoryInput(false);
   };
 
-  // Live price-warning calculation — shows a warning (not a blocker) if cost >= selling price
-  const cost = parseFloat(String(formData.cost_price).replace('$', ''));
-  const sell = parseFloat(String(formData.price).replace('$', ''));
-  const showPriceWarning = !isNaN(cost) && !isNaN(sell) && cost >= sell;
+  // Show a warning if cost price >= selling price — memoized to avoid recalculating on every render
+  const showPriceWarning = useMemo(() => {
+    const cost = parseFloat(String(formData.cost_price).replace('$', ''));
+    const sell = parseFloat(String(formData.price).replace('$', ''));
+    return !isNaN(cost) && !isNaN(sell) && cost >= sell;
+  }, [formData.cost_price, formData.price]);
 
   // --- Render ---
   return (

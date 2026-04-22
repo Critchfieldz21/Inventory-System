@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';import { useNavigate, Link } from 'react-router-dom';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { analyticsAPI } from '../../api';
 import FinancialSummary from './FinancialSummary';
 import DashboardChart from './DashboardChart';
@@ -33,80 +34,21 @@ function Home() {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-        // Fetch all data in parallel
-        const [dashboard, lowStock, weeklySales, weeklyExpenses, topWeek, topMonth, topQuarter, monthlyExpenses, monthlyExpenseSeries, monthlyRevenueSeries, quarterlyRaw] = await Promise.all([
-          analyticsAPI.getDashboardSummary(),
-          analyticsAPI.getLowStockItems(),
-          analyticsAPI.getWeeklySalesData(),
-          analyticsAPI.getWeeklyExpensesData(),
-          analyticsAPI.getTopItemsSold('week'),
-          analyticsAPI.getTopItemsSold('month'),
-          analyticsAPI.getTopItemsSold('quarter'),
-          analyticsAPI.getMonthlyExpensesData(),
-          analyticsAPI.getMonthlyExpenseSeriesData(),
-          analyticsAPI.getMonthlyRevenueSeriesData(),
-          analyticsAPI.getQuarterlyData(),
-        ]);
-        
-        const revenue = dashboard.total_revenue || 0;
-        const expenses = dashboard.total_expenses || 0;
-        const profit = revenue - expenses;
-        
-        setFinancialData({
-          revenue: revenue,
-          expenses: expenses,
-          profit: profit
-        });
-        
-        // Handle both paginated (object with results) and direct array responses
-        const lowStockArray = Array.isArray(lowStock) ? lowStock : (lowStock.results || []);
-        setLowStockItems(lowStockArray || []);
-        
-        // Set top items sold per period
-        setWeeklyTopItems(Array.isArray(topWeek) ? topWeek : []);
-        setMonthlyTopItems(Array.isArray(topMonth) ? topMonth : []);
-        setQuarterlyTopItems(Array.isArray(topQuarter) ? topQuarter : []);
-        
-        // Calculate profit for each day (revenue - expenses)
-        const weeklyRevenue = Array.isArray(weeklySales) ? weeklySales : (weeklySales || []);
-        const weeklyExpenseData = Array.isArray(weeklyExpenses) ? weeklyExpenses : (weeklyExpenses || []);
-        
-        const profitByDay = weeklyRevenue.map(dayData => {
-          const dayExpenses = weeklyExpenseData.find(exp => exp.name === dayData.name);
-          const dailyExpense = dayExpenses ? parseFloat(dayExpenses.expenses || 0) : 0;
-          const dailyRevenue = parseFloat(dayData.profit || 0);
-          return {
-            name: dayData.name,
-            profit: parseFloat((dailyRevenue - dailyExpense).toFixed(2))
-          };
-        });
-        
-        // Store raw weekly expense data for the expense chart view
-        setWeeklyExpenseData(weeklyExpenseData);
+        // Single call — fetches items/recipes/sales/expenses once, processes everything
+        const data = await analyticsAPI.getDashboardAll();
 
-        // Build weekly revenue series from weeklySales (rename 'profit' field to 'revenue')
-        setWeeklyRevenueData(weeklyRevenue.map(d => ({ name: d.name, revenue: parseFloat(d.profit || 0) })));
-
-        setWeeklyData(profitByDay || [
-          { name: 'Sun', profit: 0 },
-          { name: 'Mon', profit: 0 },
-          { name: 'Tue', profit: 0 },
-          { name: 'Wed', profit: 0 },
-          { name: 'Thu', profit: 0 },
-          { name: 'Fri', profit: 0 },
-          { name: 'Sat', profit: 0 },
-        ]);
-
-        // Monthly profit data (revenue - expenses per day)
-        setMonthlyData(Array.isArray(monthlyExpenses) ? monthlyExpenses : []);
-        // Monthly expense-only series
-        setMonthlyExpenseData(Array.isArray(monthlyExpenseSeries) ? monthlyExpenseSeries : []);
-        // Monthly revenue-only series
-        setMonthlyRevenueData(Array.isArray(monthlyRevenueSeries) ? monthlyRevenueSeries : []);
-
-        // Quarterly data (profit, expenses, revenue by week within current quarter)
-        setQuarterlyData(quarterlyRaw && typeof quarterlyRaw === 'object' ? quarterlyRaw : { profit: [], expenses: [], revenue: [] });
-        
+        setFinancialData(data.financialData);
+        setLowStockItems(data.lowStockItems);
+        setWeeklyTopItems(data.weeklyTopItems);
+        setMonthlyTopItems(data.monthlyTopItems);
+        setQuarterlyTopItems(data.quarterlyTopItems);
+        setWeeklyData(data.weeklyData);
+        setWeeklyExpenseData(data.weeklyExpenseData);
+        setWeeklyRevenueData(data.weeklyRevenueData);
+        setMonthlyData(data.monthlyData);
+        setMonthlyExpenseData(data.monthlyExpenseData);
+        setMonthlyRevenueData(data.monthlyRevenueData);
+        setQuarterlyData(data.quarterlyData);
         setError(null);
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
@@ -132,6 +74,13 @@ function Home() {
 
     fetchDashboardData();
   }, []);
+
+  // Derive active top-items list from chartView — memoized to avoid work on every render
+  const activeTopItems = useMemo(() => (
+    chartView === 'month'   ? monthlyTopItems   :
+    chartView === 'quarter' ? quarterlyTopItems :
+    weeklyTopItems
+  ), [chartView, weeklyTopItems, monthlyTopItems, quarterlyTopItems]);
 
   return (
     <div className={`home-layout${sidebarOpen ? ' sidebar-open' : ''}`}>
@@ -190,11 +139,7 @@ function Home() {
               quarterlyData={quarterlyData}
             />
             <DashboardLists
-              topItems={
-                chartView === 'month'   ? monthlyTopItems :
-                chartView === 'quarter' ? quarterlyTopItems :
-                weeklyTopItems
-              }
+              topItems={activeTopItems}
               lowStockItems={lowStockItems}
               chartView={chartView}
             />

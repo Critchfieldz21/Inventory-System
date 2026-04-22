@@ -2,6 +2,9 @@
 // Base URL for the Django backend
 const API_BASE_URL = 'http://localhost:8000/api';
 
+// Normalize paginated (DRF) or plain array responses into a flat array
+const toArray = (data) => Array.isArray(data) ? data : (data?.results ?? []);
+
 // Helper function for API requests
 const apiRequest = async (endpoint, options = {}) => {
   const url = `${API_BASE_URL}${endpoint}`;
@@ -266,24 +269,20 @@ export const analyticsAPI = {
         expensesAPI.getTotal(),
       ]);
 
-      // Handle both paginated and direct array responses
-      const itemsArray = Array.isArray(items) ? items : (items.results || []);
-      const recipesArray = Array.isArray(recipes) ? recipes : (recipes.results || []);
-      const salesArray = Array.isArray(sales) ? sales : (sales.results || []);
+      const itemsArray   = toArray(items);
+      const recipesArray = toArray(recipes);
+      const salesArray   = toArray(sales);
 
-      // Calculate total revenue from completed sales
       const completedSales = salesArray.filter(s => s.status === 'Completed');
-      const totalRevenue = completedSales.reduce((sum, s) => sum + parseFloat(s.total || 0), 0);
-
-      // Total expenses = sum of all recorded purchase expenses (cost_price × quantity when buying stock)
-      const totalExpenses = parseFloat(expenseTotal.total_expenses || 0);
+      const totalRevenue   = completedSales.reduce((sum, s) => sum + parseFloat(s.total || 0), 0);
+      const totalExpenses  = parseFloat(expenseTotal.total_expenses || 0);
 
       return {
-        total_revenue: totalRevenue,
+        total_revenue:  totalRevenue,
         total_expenses: totalExpenses,
-        totalItems: itemsArray.length,
-        totalRecipes: recipesArray.length,
-        salesCount: salesArray.length,
+        totalItems:     itemsArray.length,
+        totalRecipes:   recipesArray.length,
+        salesCount:     salesArray.length,
       };
     } catch (error) {
       console.error('Error fetching dashboard summary:', error);
@@ -295,9 +294,7 @@ export const analyticsAPI = {
   getLowStockItems: async () => {
     try {
       const items = await itemsAPI.getAll();
-      // Handle both paginated and direct array responses
-      const itemsArray = Array.isArray(items) ? items : (items.results || []);
-      return itemsArray.filter(item => item.stock < 10);
+      return toArray(items).filter(item => item.stock < 10);
     } catch (error) {
       console.error('Error fetching low stock items:', error);
       throw error;
@@ -307,21 +304,19 @@ export const analyticsAPI = {
   // Get sales statistics
   getSalesStats: async () => {
     try {
-      const sales = await transactionsAPI.getSales();
-      // Handle both paginated and direct array responses
-      const salesArray = Array.isArray(sales) ? sales : (sales.results || []);
-      const today = new Date().toISOString().split('T')[0];
-      
-      const todaysSales = salesArray.filter(sale => 
+      const sales      = await transactionsAPI.getSales();
+      const salesArray = toArray(sales);
+      const today      = new Date().toISOString().split('T')[0];
+
+      const todaysSales = salesArray.filter(sale =>
         sale.transaction_date.split('T')[0] === today
       );
 
       return {
-        totalSales: salesArray.length,
-        todaysSales: todaysSales.length,
+        totalSales:    salesArray.length,
+        todaysSales:   todaysSales.length,
         todaysRevenue: todaysSales.reduce(
-          (sum, sale) => sum + (sale.quantity_delta * sale.unit_price),
-          0
+          (sum, sale) => sum + (sale.quantity_delta * sale.unit_price), 0
         ),
       };
     } catch (error) {
@@ -333,37 +328,23 @@ export const analyticsAPI = {
   // Get weekly sales data for graph
   getWeeklySalesData: async () => {
     try {
-      const sales = await transactionsAPI.getSales();
-      // Handle both paginated and direct array responses
-      const salesArray = Array.isArray(sales) ? sales : (sales.results || []);
-      
-      // Get completed sales only
-      const completedSales = salesArray.filter(s => s.status === 'Completed');
-      
-      // Create a map of days of the week
-      const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-      const weeklyData = {};
-      
-      // Initialize all days with 0 profit
-      daysOfWeek.forEach(day => {
-        weeklyData[day] = 0;
-      });
-      
-      // Calculate profit for each day
-      completedSales.forEach(sale => {
-        try {
-          const saleDate = new Date(sale.date);
-          const dayName = daysOfWeek[saleDate.getDay()];
-          weeklyData[dayName] += parseFloat(sale.total || 0);
-        } catch (e) {
-          // Skip sales with invalid dates
-        }
-      });
-      
-      // Format for chart
+      const sales          = await transactionsAPI.getSales();
+      const salesArray     = toArray(sales);
+      const daysOfWeek     = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const weeklyData     = Object.fromEntries(daysOfWeek.map(d => [d, 0]));
+
+      salesArray
+        .filter(s => s.status === 'Completed')
+        .forEach(sale => {
+          try {
+            const day = daysOfWeek[new Date(sale.date).getDay()];
+            weeklyData[day] += parseFloat(sale.total || 0);
+          } catch (e) { /* skip invalid dates */ }
+        });
+
       return daysOfWeek.map(day => ({
-        name: day,
-        profit: parseFloat(weeklyData[day].toFixed(2))
+        name:   day,
+        profit: parseFloat(weeklyData[day].toFixed(2)),
       }));
     } catch (error) {
       console.error('Error fetching weekly sales data:', error);
@@ -374,31 +355,21 @@ export const analyticsAPI = {
   // Get weekly expenses data (purchase costs when items were bought/restocked)
   getWeeklyExpensesData: async () => {
     try {
-      const expenses = await expensesAPI.getAll();
-      const expensesArray = Array.isArray(expenses) ? expenses : (expenses.results || []);
+      const expenses      = await expensesAPI.getAll();
+      const expensesArray = toArray(expenses);
+      const daysOfWeek    = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const weeklyData    = Object.fromEntries(daysOfWeek.map(d => [d, 0]));
 
-      // Create a map of days of the week
-      const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-      const weeklyData = {};
-
-      // Initialize all days with 0 expenses
-      daysOfWeek.forEach(day => { weeklyData[day] = 0; });
-
-      // Sum expenses by day of week
       expensesArray.forEach(expense => {
         try {
-          const expDate = new Date(expense.date);
-          const dayName = daysOfWeek[expDate.getDay()];
-          weeklyData[dayName] += parseFloat(expense.amount || 0);
-        } catch (e) {
-          // Skip entries with invalid dates
-        }
+          const day = daysOfWeek[new Date(expense.date).getDay()];
+          weeklyData[day] += parseFloat(expense.amount || 0);
+        } catch (e) { /* skip invalid dates */ }
       });
 
-      // Format for chart
       return daysOfWeek.map(day => ({
-        name: day,
-        expenses: parseFloat(weeklyData[day].toFixed(2))
+        name:     day,
+        expenses: parseFloat(weeklyData[day].toFixed(2)),
       }));
     } catch (error) {
       console.error('Error fetching weekly expenses data:', error);
@@ -407,56 +378,41 @@ export const analyticsAPI = {
   },
 
   // Get monthly profit data — revenue minus purchase expenses per calendar day
-  // month: 0-based JS month (default = current month), year: full year (default = current year)
   getMonthlyExpensesData: async (month, year) => {
     try {
-      const now = new Date();
+      const now         = new Date();
       const targetMonth = month !== undefined ? month : now.getMonth();
       const targetYear  = year  !== undefined ? year  : now.getFullYear();
 
-      // Fetch sales and purchase expenses in parallel
       const [salesRaw, expensesRaw] = await Promise.all([
         transactionsAPI.getSales(),
         expensesAPI.getAll(),
       ]);
 
-      const salesArray    = Array.isArray(salesRaw)    ? salesRaw    : (salesRaw.results    || []);
-      const expensesArray = Array.isArray(expensesRaw) ? expensesRaw : (expensesRaw.results || []);
+      const salesArray    = toArray(salesRaw);
+      const expensesArray = toArray(expensesRaw);
+      const daysInMonth   = new Date(targetYear, targetMonth + 1, 0).getDate();
+      const dailyRevenue  = new Array(daysInMonth + 1).fill(0);
+      const dailyExpenses = new Array(daysInMonth + 1).fill(0);
 
-      // How many days are in the target month?
-      const daysInMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
-
-      // Zero-filled maps keyed by day-of-month (1 … daysInMonth)
-      const dailyRevenue  = {};
-      const dailyExpenses = {};
-      for (let d = 1; d <= daysInMonth; d++) {
-        dailyRevenue[d]  = 0;
-        dailyExpenses[d] = 0;
-      }
-
-      // Accumulate completed sales revenue by day
       salesArray
         .filter(s => s.status === 'Completed')
         .forEach(sale => {
           try {
             const d = new Date(sale.date);
-            if (d.getFullYear() === targetYear && d.getMonth() === targetMonth) {
+            if (d.getFullYear() === targetYear && d.getMonth() === targetMonth)
               dailyRevenue[d.getDate()] += parseFloat(sale.total || 0);
-            }
           } catch (e) { /* skip bad dates */ }
         });
 
-      // Accumulate purchase expenses by day
       expensesArray.forEach(expense => {
         try {
           const d = new Date(expense.date);
-          if (d.getFullYear() === targetYear && d.getMonth() === targetMonth) {
+          if (d.getFullYear() === targetYear && d.getMonth() === targetMonth)
             dailyExpenses[d.getDate()] += parseFloat(expense.amount || 0);
-          }
         } catch (e) { /* skip bad dates */ }
       });
 
-      // Return profit (revenue - expenses) per day
       const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
       return Array.from({ length: daysInMonth }, (_, i) => {
         const day = i + 1;
@@ -472,65 +428,47 @@ export const analyticsAPI = {
   },
 
   // Get quarterly data — revenue, expenses, and profit aggregated by week
-  // within the current calendar quarter (Q1=Jan-Mar, Q2=Apr-Jun, Q3=Jul-Sep, Q4=Oct-Dec).
-  // Returns { profit: [], expenses: [], revenue: [] } each as Array<{name:'Wk N', value}>
   getQuarterlyData: async (year) => {
     try {
-      const now          = new Date();
-      const targetYear   = year !== undefined ? year : now.getFullYear();
-      const currentMonth = now.getMonth(); // 0-based
+      const now               = new Date();
+      const targetYear        = year !== undefined ? year : now.getFullYear();
+      const currentMonth      = now.getMonth();
+      const quarterStartMonth = Math.floor(currentMonth / 3) * 3;
+      const quarterEndMonth   = quarterStartMonth + 2;
+      const startDate         = new Date(targetYear, quarterStartMonth, 1);
+      const endDate           = new Date(targetYear, quarterEndMonth + 1, 0);
+      const totalDays         = Math.round((endDate - startDate) / 86400000) + 1;
+      const numWeeks          = Math.ceil(totalDays / 7);
+      const weekRevenue       = new Array(numWeeks).fill(0);
+      const weekExpenses      = new Array(numWeeks).fill(0);
 
-      // Determine current quarter's start month (0-based)
-      const quarterStartMonth = Math.floor(currentMonth / 3) * 3; // 0, 3, 6, or 9
-      const quarterEndMonth   = quarterStartMonth + 2;             // inclusive
-
-      // Build a list of all days in the quarter
-      const startDate = new Date(targetYear, quarterStartMonth, 1);
-      const endDate   = new Date(targetYear, quarterEndMonth + 1, 0); // last day of last month
-
-      // Fetch sales and expenses in parallel
       const [salesRaw, expensesRaw] = await Promise.all([
         transactionsAPI.getSales(),
         expensesAPI.getAll(),
       ]);
-      const salesArray    = Array.isArray(salesRaw)    ? salesRaw    : (salesRaw.results    || []);
-      const expensesArray = Array.isArray(expensesRaw) ? expensesRaw : (expensesRaw.results || []);
 
-      // Total days in quarter
-      const totalDays = Math.round((endDate - startDate) / 86400000) + 1;
-      // ~13 weeks — bucket each day into a week index (0-based)
-      const numWeeks  = Math.ceil(totalDays / 7);
-
-      const weekRevenue  = new Array(numWeeks).fill(0);
-      const weekExpenses = new Array(numWeeks).fill(0);
-
-      // Accumulate sales revenue by quarter-week
-      salesArray
+      toArray(salesRaw)
         .filter(s => s.status === 'Completed')
         .forEach(sale => {
           try {
             const d = new Date(sale.date);
             if (d >= startDate && d <= endDate) {
-              const dayOffset = Math.round((d - startDate) / 86400000);
-              const weekIdx   = Math.floor(dayOffset / 7);
+              const weekIdx = Math.floor(Math.round((d - startDate) / 86400000) / 7);
               weekRevenue[weekIdx] += parseFloat(sale.total || 0);
             }
           } catch (e) { /* skip bad dates */ }
         });
 
-      // Accumulate purchase expenses by quarter-week
-      expensesArray.forEach(expense => {
+      toArray(expensesRaw).forEach(expense => {
         try {
           const d = new Date(expense.date);
           if (d >= startDate && d <= endDate) {
-            const dayOffset = Math.round((d - startDate) / 86400000);
-            const weekIdx   = Math.floor(dayOffset / 7);
+            const weekIdx = Math.floor(Math.round((d - startDate) / 86400000) / 7);
             weekExpenses[weekIdx] += parseFloat(expense.amount || 0);
           }
         } catch (e) { /* skip bad dates */ }
       });
 
-      // Build the three series arrays
       const quarterName = `Q${Math.floor(currentMonth / 3) + 1}`;
       const revenue  = [];
       const expenses = [];
@@ -555,25 +493,21 @@ export const analyticsAPI = {
   // Get monthly revenue series — completed sales revenue per calendar day
   getMonthlyRevenueSeriesData: async (month, year) => {
     try {
-      const now = new Date();
+      const now         = new Date();
       const targetMonth = month !== undefined ? month : now.getMonth();
       const targetYear  = year  !== undefined ? year  : now.getFullYear();
 
-      const salesRaw = await transactionsAPI.getSales();
-      const salesArray = Array.isArray(salesRaw) ? salesRaw : (salesRaw.results || []);
-
+      const salesArray  = toArray(await transactionsAPI.getSales());
       const daysInMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
-      const dailyRevenue = {};
-      for (let d = 1; d <= daysInMonth; d++) dailyRevenue[d] = 0;
+      const dailyRevenue = new Array(daysInMonth + 1).fill(0);
 
       salesArray
         .filter(s => s.status === 'Completed')
         .forEach(sale => {
           try {
             const d = new Date(sale.date);
-            if (d.getFullYear() === targetYear && d.getMonth() === targetMonth) {
+            if (d.getFullYear() === targetYear && d.getMonth() === targetMonth)
               dailyRevenue[d.getDate()] += parseFloat(sale.total || 0);
-            }
           } catch (e) { /* skip bad dates */ }
         });
 
@@ -591,27 +525,22 @@ export const analyticsAPI = {
     }
   },
 
-  // Get monthly expense series — purchase expenses per calendar day (not profit)
-  // month: 0-based JS month (default = current month), year: full year (default = current year)
+  // Get monthly expense series — purchase expenses per calendar day
   getMonthlyExpenseSeriesData: async (month, year) => {
     try {
-      const now = new Date();
+      const now         = new Date();
       const targetMonth = month !== undefined ? month : now.getMonth();
       const targetYear  = year  !== undefined ? year  : now.getFullYear();
 
-      const expensesRaw = await expensesAPI.getAll();
-      const expensesArray = Array.isArray(expensesRaw) ? expensesRaw : (expensesRaw.results || []);
-
-      const daysInMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
-      const dailyExpenses = {};
-      for (let d = 1; d <= daysInMonth; d++) dailyExpenses[d] = 0;
+      const expensesArray = toArray(await expensesAPI.getAll());
+      const daysInMonth   = new Date(targetYear, targetMonth + 1, 0).getDate();
+      const dailyExpenses = new Array(daysInMonth + 1).fill(0);
 
       expensesArray.forEach(expense => {
         try {
           const d = new Date(expense.date);
-          if (d.getFullYear() === targetYear && d.getMonth() === targetMonth) {
+          if (d.getFullYear() === targetYear && d.getMonth() === targetMonth)
             dailyExpenses[d.getDate()] += parseFloat(expense.amount || 0);
-          }
         } catch (e) { /* skip bad dates */ }
       });
 
@@ -629,31 +558,24 @@ export const analyticsAPI = {
     }
   },
 
-  // Get top 3 items sold
-  // period: 'week' | 'month' | 'quarter' | undefined (all-time)
+  // Get top 3 items sold for a given period ('week' | 'month' | 'quarter' | undefined)
   getTopItemsSold: async (period) => {
     try {
-      const sales = await transactionsAPI.getSales();
-      // Handle both paginated and direct array responses
-      const salesArray = Array.isArray(sales) ? sales : (sales.results || []);
+      const sales      = await transactionsAPI.getSales();
+      const salesArray = toArray(sales);
 
-      // Build date filter based on period
       const now = new Date();
       let startDate = null;
       if (period === 'week') {
-        // Start of the current week (Sunday)
-        const day = now.getDay();
         startDate = new Date(now);
-        startDate.setDate(now.getDate() - day);
+        startDate.setDate(now.getDate() - now.getDay());
         startDate.setHours(0, 0, 0, 0);
       } else if (period === 'month') {
         startDate = new Date(now.getFullYear(), now.getMonth(), 1);
       } else if (period === 'quarter') {
-        const qStartMonth = Math.floor(now.getMonth() / 3) * 3;
-        startDate = new Date(now.getFullYear(), qStartMonth, 1);
+        startDate = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
       }
 
-      // Get completed sales only, filtered by period if specified
       const completedSales = salesArray.filter(s => {
         if (s.status !== 'Completed') return false;
         if (startDate) {
@@ -661,40 +583,190 @@ export const analyticsAPI = {
         }
         return true;
       });
-      
-      // Count quantity sold per item
+
       const itemSalesMap = {};
       completedSales.forEach(sale => {
-        if (!itemSalesMap[sale.item]) {
-          itemSalesMap[sale.item] = {
-            itemId: sale.item,
-            quantity: 0,
-            itemName: ''
-          };
-        }
+        if (!itemSalesMap[sale.item])
+          itemSalesMap[sale.item] = { itemId: sale.item, quantity: 0, itemName: '' };
         itemSalesMap[sale.item].quantity += sale.quantity;
       });
-      
-      // Get item names from items API
-      const items = await itemsAPI.getAll();
-      const itemsArray = Array.isArray(items) ? items : (items.results || []);
-      
-      // Add item names to sales data
-      Object.values(itemSalesMap).forEach(sale => {
-        const item = itemsArray.find(i => i.id === sale.itemId);
-        if (item) {
-          sale.itemName = item.name;
-        }
+
+      const itemsArray = toArray(await itemsAPI.getAll());
+      Object.values(itemSalesMap).forEach(entry => {
+        const item = itemsArray.find(i => i.id === entry.itemId);
+        if (item) entry.itemName = item.name;
       });
-      
-      // Sort by quantity sold and get top 3
-      const topItems = Object.values(itemSalesMap)
+
+      return Object.values(itemSalesMap)
         .sort((a, b) => b.quantity - a.quantity)
         .slice(0, 3);
-      
-      return topItems;
     } catch (error) {
       console.error('Error fetching top items sold:', error);
+      throw error;
+    }
+  },
+
+  // ── Single-fetch dashboard: replaces 11 individual analytics calls ──────────
+  // Fetches items, recipes, sales, and expenses ONCE (4 requests) and
+  // derives all data the home dashboard needs, eliminating ~20 redundant calls.
+  getDashboardAll: async (month, year) => {
+    try {
+      const now         = new Date();
+      const targetMonth = month !== undefined ? month : now.getMonth();
+      const targetYear  = year  !== undefined ? year  : now.getFullYear();
+      const monthNames  = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      const daysOfWeek  = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+      // Single batch fetch — 5 requests instead of ~20
+      const [itemsRaw, , salesRaw, expensesRaw, expenseTotalRaw] = await Promise.all([
+        itemsAPI.getAll(),
+        recipesAPI.getAll(),
+        transactionsAPI.getSales(),
+        expensesAPI.getAll(),
+        expensesAPI.getTotal(),
+      ]);
+
+      const itemsArray    = toArray(itemsRaw);
+      const salesArray    = toArray(salesRaw);
+      const expensesArray = toArray(expensesRaw);
+      const completedSales = salesArray.filter(s => s.status === 'Completed');
+
+      // ── Financial summary ───────────────────────────────────────────
+      const totalRevenue  = completedSales.reduce((sum, s) => sum + parseFloat(s.total || 0), 0);
+      const totalExpenses = parseFloat(expenseTotalRaw.total_expenses || 0);
+      const financialData = {
+        revenue:  totalRevenue,
+        expenses: totalExpenses,
+        profit:   totalRevenue - totalExpenses,
+      };
+
+      // ── Low stock ───────────────────────────────────────────────────
+      const lowStockItems = itemsArray.filter(item => item.stock < 10);
+
+      // ── Weekly ──────────────────────────────────────────────────────
+      const weeklyRevMap = Object.fromEntries(daysOfWeek.map(d => [d, 0]));
+      const weeklyExpMap = Object.fromEntries(daysOfWeek.map(d => [d, 0]));
+
+      completedSales.forEach(sale => {
+        try { weeklyRevMap[daysOfWeek[new Date(sale.date).getDay()]] += parseFloat(sale.total || 0); }
+        catch (e) { /* skip */ }
+      });
+      expensesArray.forEach(exp => {
+        try { weeklyExpMap[daysOfWeek[new Date(exp.date).getDay()]] += parseFloat(exp.amount || 0); }
+        catch (e) { /* skip */ }
+      });
+
+      const weeklyRevenueData = daysOfWeek.map(d => ({ name: d, revenue:  parseFloat(weeklyRevMap[d].toFixed(2)) }));
+      const weeklyExpenseData = daysOfWeek.map(d => ({ name: d, expenses: parseFloat(weeklyExpMap[d].toFixed(2)) }));
+      const weeklyData        = daysOfWeek.map(d => ({ name: d, profit:   parseFloat((weeklyRevMap[d] - weeklyExpMap[d]).toFixed(2)) }));
+
+      // ── Monthly ─────────────────────────────────────────────────────
+      const daysInMonth  = new Date(targetYear, targetMonth + 1, 0).getDate();
+      const dailyRevenue  = new Array(daysInMonth + 1).fill(0);
+      const dailyExpenses = new Array(daysInMonth + 1).fill(0);
+
+      completedSales.forEach(sale => {
+        try {
+          const d = new Date(sale.date);
+          if (d.getFullYear() === targetYear && d.getMonth() === targetMonth)
+            dailyRevenue[d.getDate()] += parseFloat(sale.total || 0);
+        } catch (e) { /* skip */ }
+      });
+      expensesArray.forEach(exp => {
+        try {
+          const d = new Date(exp.date);
+          if (d.getFullYear() === targetYear && d.getMonth() === targetMonth)
+            dailyExpenses[d.getDate()] += parseFloat(exp.amount || 0);
+        } catch (e) { /* skip */ }
+      });
+
+      const buildMonthly = (field, getValue) =>
+        Array.from({ length: daysInMonth }, (_, i) => ({
+          name: `${monthNames[targetMonth]} ${i + 1}`,
+          [field]: parseFloat(getValue(i + 1).toFixed(2)),
+        }));
+
+      const monthlyData        = buildMonthly('profit',   d => dailyRevenue[d] - dailyExpenses[d]);
+      const monthlyRevenueData = buildMonthly('revenue',  d => dailyRevenue[d]);
+      const monthlyExpenseData = buildMonthly('expenses', d => dailyExpenses[d]);
+
+      // ── Quarterly ───────────────────────────────────────────────────
+      const currentMonth      = now.getMonth();
+      const quarterStartMonth = Math.floor(currentMonth / 3) * 3;
+      const qStart            = new Date(targetYear, quarterStartMonth, 1);
+      const qEnd              = new Date(targetYear, quarterStartMonth + 3, 0);
+      const numWeeks          = Math.ceil((Math.round((qEnd - qStart) / 86400000) + 1) / 7);
+      const weekRevenue       = new Array(numWeeks).fill(0);
+      const weekExpenses      = new Array(numWeeks).fill(0);
+
+      completedSales.forEach(sale => {
+        try {
+          const d = new Date(sale.date);
+          if (d >= qStart && d <= qEnd) {
+            const wk = Math.floor(Math.round((d - qStart) / 86400000) / 7);
+            weekRevenue[wk] += parseFloat(sale.total || 0);
+          }
+        } catch (e) { /* skip */ }
+      });
+      expensesArray.forEach(exp => {
+        try {
+          const d = new Date(exp.date);
+          if (d >= qStart && d <= qEnd) {
+            const wk = Math.floor(Math.round((d - qStart) / 86400000) / 7);
+            weekExpenses[wk] += parseFloat(exp.amount || 0);
+          }
+        } catch (e) { /* skip */ }
+      });
+
+      const qName = `Q${Math.floor(currentMonth / 3) + 1}`;
+      const quarterlyData = { profit: [], expenses: [], revenue: [] };
+      for (let w = 0; w < numWeeks; w++) {
+        const name = `${qName} Wk ${w + 1}`;
+        const rev  = parseFloat(weekRevenue[w].toFixed(2));
+        const exp  = parseFloat(weekExpenses[w].toFixed(2));
+        quarterlyData.revenue.push( { name, revenue:  rev });
+        quarterlyData.expenses.push({ name, expenses: exp });
+        quarterlyData.profit.push(  { name, profit:   parseFloat((rev - exp).toFixed(2)) });
+      }
+
+      // ── Top items ───────────────────────────────────────────────────
+      const getTopItems = (periodStart) => {
+        const filtered = completedSales.filter(s => {
+          if (!periodStart) return true;
+          try { return new Date(s.date) >= periodStart; } catch (e) { return false; }
+        });
+        const map = {};
+        filtered.forEach(sale => {
+          if (!map[sale.item]) map[sale.item] = { itemId: sale.item, quantity: 0, itemName: '' };
+          map[sale.item].quantity += sale.quantity;
+        });
+        Object.values(map).forEach(entry => {
+          const item = itemsArray.find(i => i.id === entry.itemId);
+          if (item) entry.itemName = item.name;
+        });
+        return Object.values(map).sort((a, b) => b.quantity - a.quantity).slice(0, 3);
+      };
+
+      const weekStart    = new Date(now); weekStart.setDate(now.getDate() - now.getDay()); weekStart.setHours(0,0,0,0);
+      const monthStart   = new Date(now.getFullYear(), now.getMonth(), 1);
+      const quarterStart = new Date(now.getFullYear(), quarterStartMonth, 1);
+
+      return {
+        financialData,
+        lowStockItems,
+        weeklyData,
+        weeklyExpenseData,
+        weeklyRevenueData,
+        monthlyData,
+        monthlyExpenseData,
+        monthlyRevenueData,
+        quarterlyData,
+        weeklyTopItems:    getTopItems(weekStart),
+        monthlyTopItems:   getTopItems(monthStart),
+        quarterlyTopItems: getTopItems(quarterStart),
+      };
+    } catch (error) {
+      console.error('Error fetching all dashboard data:', error);
       throw error;
     }
   },

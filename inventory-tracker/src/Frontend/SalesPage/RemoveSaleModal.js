@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 
 /**
  * RemoveSaleModal
@@ -39,4 +39,4 @@ function RemoveSaleModal({ selectedRows, salesData, handleConfirmRemove, onClose
   );
 }
 
-export default RemoveSaleModal;
+export default memo(RemoveSaleModal);

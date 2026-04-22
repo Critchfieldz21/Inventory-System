@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 
 /**
  * AddRecipeModal
@@ -36,6 +36,12 @@ function AddRecipeModal({
     onClose();
   };
 
+  // Memoize filtered ingredient list — items.filter was previously called twice in JSX
+  const filteredIngredients = useMemo(() =>
+    items.filter(item => item.name.toLowerCase().includes(ingredientSearch.toLowerCase())),
+    [items, ingredientSearch]
+  );
+
   return (
     <div className="modal-overlay" onClick={handleClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -63,9 +69,7 @@ function AddRecipeModal({
             onChange={(e) => setIngredientSearch(e.target.value)}
           />
           <div className="ingredient-selector">
-            {items
-              .filter(item => item.name.toLowerCase().includes(ingredientSearch.toLowerCase()))
-              .map((item) => (
+            {filteredIngredients.map((item) => (
                 <button
                   key={item.id}
                   className="ingredient-btn"
@@ -75,9 +79,7 @@ function AddRecipeModal({
                   + {item.name}
                 </button>
               ))}
-            {items.filter(item =>
-              item.name.toLowerCase().includes(ingredientSearch.toLowerCase())
-            ).length === 0 && (
+            {filteredIngredients.length === 0 && (
               <p className="ingredient-no-results">No ingredients match "{ingredientSearch}"</p>
             )}
           </div>

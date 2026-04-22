@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import SalesSearchableSelect from './SalesSearchableSelect';
 
 /**
@@ -45,6 +45,18 @@ function AddSaleModal({
     setFormData({ item: '', quantity: '', total: '', status: 'Completed' });
     setSelectedRecipeIngredients([]);
   };
+
+  // Parse and enrich ingredient list once — avoids re-parsing on every render
+  const parsedIngredients = useMemo(() => {
+    if (!selectedRecipeIngredients) return [];
+    const list = parseRecipeIngredients(selectedRecipeIngredients);
+    return list.map(ing => {
+      const ingredientItem = items.find(
+        item => item.name.toLowerCase() === ing.name.toLowerCase()
+      );
+      return { ...ing, ingredientItem };
+    });
+  }, [selectedRecipeIngredients, parseRecipeIngredients, items]);
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -127,27 +139,20 @@ function AddSaleModal({
               <div className="form-group">
                 <label>Ingredients Required:</label>
                 <div className="ingredients-list">
-                  {(() => {
-                    const ingredientsList = parseRecipeIngredients(selectedRecipeIngredients);
-                    if (ingredientsList.length === 0) {
-                      return <div className="no-ingredients">No ingredients added to this recipe</div>;
-                    }
-                    return ingredientsList.map((ing, index) => {
-                      const ingredientItem = items.find(
-                        item => item.name.toLowerCase() === ing.name.toLowerCase()
-                      );
-                      const requiredQty = ing.quantity * (parseInt(formData.quantity) || 1);
-                      const hasEnough = ingredientItem && requiredQty <= ingredientItem.stock;
-                      return (
-                        <div key={index} className={`ingredient-item ${hasEnough ? '' : 'insufficient'}`}>
-                          <span>{requiredQty}x {ing.name}</span>
-                          <span className={`ingredient-stock ${!hasEnough ? 'warning' : ''}`}>
-                            Available: {ingredientItem?.stock || 0}
-                          </span>
-                        </div>
-                      );
-                    });
-                  })()}
+                  {parsedIngredients.length === 0 ? (
+                    <div className="no-ingredients">No ingredients added to this recipe</div>
+                  ) : parsedIngredients.map((ing, index) => {
+                    const requiredQty = ing.quantity * (parseInt(formData.quantity) || 1);
+                    const hasEnough = ing.ingredientItem && requiredQty <= ing.ingredientItem.stock;
+                    return (
+                      <div key={index} className={`ingredient-item ${hasEnough ? '' : 'insufficient'}`}>
+                        <span>{requiredQty}x {ing.name}</span>
+                        <span className={`ingredient-stock ${!hasEnough ? 'warning' : ''}`}>
+                          Available: {ing.ingredientItem?.stock || 0}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}

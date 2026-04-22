@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 
 /**
  * RemoveRecipeModal
@@ -41,4 +41,4 @@ function RemoveRecipeModal({ selectedRecipes, recipes, handleConfirmRemove, onCl
   );
 }
 
-export default RemoveRecipeModal;
+export default memo(RemoveRecipeModal);

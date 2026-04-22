@@ -44,7 +44,7 @@
 }
 
 .modal-content p {
-  color: #6b7280;
+  color: var(--text-muted);
   margin: 10px 0;
 }
 
@@ -58,7 +58,7 @@
 .form-group label {
   margin-bottom: 8px;
   font-weight: 600;
-  color: #374151;
+  color: var(--text-main);
   font-size: 14px;
 }
 
@@ -74,7 +74,7 @@
 .form-group input:focus,
 .form-group select:focus {
   outline: none;
-  border-color: #4f46e5;
+  border-color: var(--primary-color);
   box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
 }
 
@@ -114,7 +114,7 @@
   box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
 }
 
-.btn-cancel { background: #e5e7eb; color: #374151; }
+.btn-cancel { background: var(--border-color); color: var(--text-main); }
 .btn-cancel:hover { background: #d1d5db; }
 
 /* --- Sale Type Toggle (Item / Recipe) --- */
@@ -127,17 +127,17 @@
 .toggle-btn {
   flex: 1;
   padding: 10px 16px;
-  border: 2px solid #d1d5db;
+  border: 2px solid var(--border-color);
   background: white;
   border-radius: 6px;
   cursor: pointer;
   font-weight: 600;
-  color: #6b7280;
+  color: var(--text-muted);
   transition: all 0.2s ease;
 }
 
-.toggle-btn:hover  { border-color: #4f46e5; color: #4f46e5; }
-.toggle-btn.active { background: #4f46e5; color: white; border-color: #4f46e5; }
+.toggle-btn:hover  { border-color: var(--primary-color); color: var(--primary-color); }
+.toggle-btn.active { background: var(--primary-color); color: white; border-color: var(--primary-color); }
 
 /* --- Ingredient display inside Add Sale modal --- */
 .ingredients-list {

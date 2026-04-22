@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import './SearchableSelect.css';
 
 /**
@@ -35,8 +35,9 @@ function SearchableSelect({ options, value, onChange, placeholder, displayKey, v
   }, []);
 
   // Only show options whose display label contains the search query (case-insensitive)
-  const filtered = options.filter(o =>
-    o[displayKey].toLowerCase().includes(query.toLowerCase())
+  const filtered = useMemo(() =>
+    options.filter(o => o[displayKey].toLowerCase().includes(query.toLowerCase())),
+    [options, query, displayKey]
   );
 
   // When the user picks an option: fire onChange, clear the search, and close the dropdown

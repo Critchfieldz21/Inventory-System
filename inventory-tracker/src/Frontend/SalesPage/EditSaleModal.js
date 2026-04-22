@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 
 /**
  * EditSaleModal
@@ -84,4 +84,4 @@ function EditSaleModal({ items, formData, handleFormChange, handleConfirmEdit, o
   );
 }
 
-export default EditSaleModal;
+export default memo(EditSaleModal);

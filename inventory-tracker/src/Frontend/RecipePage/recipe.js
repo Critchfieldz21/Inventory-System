@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { recipesAPI, itemsAPI } from '../../api';
 import AddRecipeModal from './AddRecipeModal';
@@ -148,40 +148,35 @@ function Recipe() {
     }
   };
 
-  const handleCheckboxChange = (recipeId) => {
-    const newSelected = new Set(selectedRecipes);
-    if (newSelected.has(recipeId)) {
-      newSelected.delete(recipeId);
-    } else {
-      newSelected.add(recipeId);
-    }
-    setSelectedRecipes(newSelected);
-  };
-
-  const handleAddIngredient = (itemName) => {
-    if (!formData.ingredients.find(ing => ing.name === itemName)) {
-      setFormData({
-        ...formData,
-        ingredients: [...formData.ingredients, { name: itemName, quantity: 1 }]
-      });
-    }
-  };
-
-  const handleRemoveIngredient = (index) => {
-    setFormData({
-      ...formData,
-      ingredients: formData.ingredients.filter((_, i) => i !== index)
+  const handleCheckboxChange = useCallback((recipeId) => {
+    setSelectedRecipes(prev => {
+      const next = new Set(prev);
+      next.has(recipeId) ? next.delete(recipeId) : next.add(recipeId);
+      return next;
     });
-  };
+  }, []);
 
-  const handleUpdateIngredientQuantity = (index, quantity) => {
-    const updatedIngredients = [...formData.ingredients];
-    updatedIngredients[index].quantity = parseInt(quantity) || 0;
-    setFormData({
-      ...formData,
-      ingredients: updatedIngredients
+  const handleAddIngredient = useCallback((itemName) => {
+    setFormData(prev => {
+      if (prev.ingredients.find(ing => ing.name === itemName)) return prev;
+      return { ...prev, ingredients: [...prev.ingredients, { name: itemName, quantity: 1 }] };
     });
-  };
+  }, []);
+
+  const handleRemoveIngredient = useCallback((index) => {
+    setFormData(prev => ({
+      ...prev,
+      ingredients: prev.ingredients.filter((_, i) => i !== index),
+    }));
+  }, []);
+
+  const handleUpdateIngredientQuantity = useCallback((index, quantity) => {
+    setFormData(prev => {
+      const updated = [...prev.ingredients];
+      updated[index] = { ...updated[index], quantity: parseInt(quantity) || 0 };
+      return { ...prev, ingredients: updated };
+    });
+  }, []);
 
   const handleConfirmAdd = async () => {
     if (formData.name && formData.ingredients.length > 0) {

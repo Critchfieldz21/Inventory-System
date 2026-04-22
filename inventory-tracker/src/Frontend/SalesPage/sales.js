@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { transactionsAPI, itemsAPI, recipesAPI } from '../../api';
 import AddSaleModal from './AddSaleModal';
@@ -34,7 +34,7 @@ function Sales() {
     status: 'Completed'
   });
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       const [salesDataBackend, itemsData, recipesData] = await Promise.all([
@@ -42,12 +42,11 @@ function Sales() {
         itemsAPI.getAll(),
         recipesAPI.getAll()
       ]);
-      
-      // Handle both paginated (object with results) and direct array responses
-      const salesArray = Array.isArray(salesDataBackend) ? salesDataBackend : (salesDataBackend.results || []);
-      const itemsArray = Array.isArray(itemsData) ? itemsData : (itemsData.results || []);
-      const recipesArray = Array.isArray(recipesData) ? recipesData : (recipesData.results || []);
-      
+
+      const salesArray   = Array.isArray(salesDataBackend) ? salesDataBackend : (salesDataBackend.results || []);
+      const itemsArray   = Array.isArray(itemsData)        ? itemsData        : (itemsData.results        || []);
+      const recipesArray = Array.isArray(recipesData)      ? recipesData      : (recipesData.results      || []);
+
       setSalesData(salesArray);
       setItems(itemsArray);
       setRecipes(recipesArray);
@@ -58,12 +57,9 @@ function Sales() {
     } finally {
       setLoading(false);
     }
-  };
-
-  // Fetch sales, items, and recipes from backend
-  useEffect(() => {
-    loadData();
   }, []);
+
+  useEffect(() => { loadData(); }, [loadData]);
 
   const handleImportXlsx = async (event) => {
     const file = event.target.files?.[0];
@@ -120,75 +116,66 @@ function Sales() {
     setShowEditModal(true);
   };
 
-  const handleCheckboxChange = (index) => {
-    const newSelected = new Set(selectedRows);
-    if (newSelected.has(index)) {
-      newSelected.delete(index);
-    } else {
-      newSelected.add(index);
-    }
-    setSelectedRows(newSelected);
-  };
+  const handleCheckboxChange = useCallback((index) => {
+    setSelectedRows(prev => {
+      const next = new Set(prev);
+      next.has(index) ? next.delete(index) : next.add(index);
+      return next;
+    });
+  }, []);
 
-  const handleSelectAll = () => {
-    if (selectedRows.size === salesData.length) {
-      setSelectedRows(new Set());
-    } else {
-      const allIndices = new Set(salesData.map((_, index) => index));
-      setSelectedRows(allIndices);
-    }
-  };
+  const handleSelectAll = useCallback(() => {
+    setSelectedRows(prev =>
+      prev.size === salesData.length
+        ? new Set()
+        : new Set(salesData.map((_, i) => i))
+    );
+  }, [salesData]);
 
-  const parseRecipeIngredients = (ingredientString) => {
+  const parseRecipeIngredients = useCallback((ingredientString) => {
     if (!ingredientString) return [];
-    
+
     // Try parsing as JSON first (format with item IDs)
     if (typeof ingredientString === 'string' && ingredientString.startsWith('[')) {
       try {
         const parsed = JSON.parse(ingredientString);
         if (Array.isArray(parsed)) {
-          // JSON format: [{"item": 2, "quantity": 1}, ...]
-          // Need to look up item names by ID
           return parsed.map(ing => {
-            const itemId = ing.item || ing.id;
+            const itemId  = ing.item || ing.id;
             const itemObj = items.find(item => item.id === itemId);
-            return {
-              name: itemObj ? itemObj.name : `Item ${itemId}`,
-              quantity: parseInt(ing.quantity) || 1,
-              item_id: itemId
-            };
+            return { name: itemObj ? itemObj.name : `Item ${itemId}`, quantity: parseInt(ing.quantity) || 1, item_id: itemId };
           });
         }
       } catch (e) {
-        // JSON parse failed, continue to try text format
         console.log('JSON parse failed, trying text format:', e);
       }
     }
-    
-    // Fall back to text format parsing (e.g., "2 flour, 1 sugar")
+
+    // Fall back to text format (e.g., "2 flour, 1 sugar")
     if (typeof ingredientString === 'string') {
-      const parsed = ingredientString.split(',').map(ing => {
+      return ingredientString.split(',').map(ing => {
         const trimmed = ing.trim();
-        // Try to match pattern: number(s) + optional 'x' + ingredient name
-        const match = trimmed.match(/^(\d+)\s*x?\s*(.+)$/i);
-        if (match) {
-          return {
-            quantity: parseInt(match[1]) || 1,
-            name: match[2].trim()
-          };
-        }
-        // Fallback if no number found
-        return {
-          quantity: 1,
-          name: trimmed
-        };
+        const match   = trimmed.match(/^(\d+)\s*x?\s*(.+)$/i);
+        return match
+          ? { quantity: parseInt(match[1]) || 1, name: match[2].trim() }
+          : { quantity: 1, name: trimmed };
       }).filter(ing => ing.name.length > 0);
-      
-      return parsed;
     }
-    
+
     return [];
-  };
+  }, [items]);
+
+  const calculateRecipeTotal = useCallback((quantity = 1) => {
+    const ingredientsList = parseRecipeIngredients(selectedRecipeIngredients);
+    let total = 0;
+    for (const ingredient of ingredientsList) {
+      const ingredientItem = items.find(item =>
+        item.name.toLowerCase() === ingredient.name.toLowerCase()
+      );
+      if (ingredientItem) total += ingredientItem.price * ingredient.quantity;
+    }
+    return (total * quantity).toFixed(2);
+  }, [items, parseRecipeIngredients, selectedRecipeIngredients]);
 
   const handleConfirmEdit = async () => {
     if (!formData.item || !formData.quantity) {
@@ -353,20 +340,6 @@ function Sales() {
     }
   };
 
-  const calculateRecipeTotal = (quantity = 1) => {
-    const ingredientsList = parseRecipeIngredients(selectedRecipeIngredients);
-    let total = 0;
-    for (const ingredient of ingredientsList) {
-      const ingredientItem = items.find(item => 
-        item.name.toLowerCase() === ingredient.name.toLowerCase()
-      );
-      if (ingredientItem) {
-        total += ingredientItem.price * ingredient.quantity;
-      }
-    }
-    return (total * quantity).toFixed(2);
-  };
-
   const handleRecipeChange = (recipeId) => {
     const selectedRecipe = recipes.find(r => r.id === parseInt(recipeId));
     if (selectedRecipe) {
@@ -461,14 +434,16 @@ function Sales() {
     setFormData(updatedFormData);
   };
 
-  // Filter sales by item name OR order ID based on the search query
-  const filteredSales = salesData.filter(sale => {
-    if (!searchQuery.trim()) return true;
+  // Filter sales by item name or order ID — memoized to avoid refiltering on every render
+  const filteredSales = useMemo(() => {
+    if (!searchQuery.trim()) return salesData;
     const q = searchQuery.toLowerCase();
-    const itemName = (sale.item_name || '').toLowerCase();
-    const orderId  = String(sale.id);
-    return itemName.includes(q) || orderId.includes(q);
-  });
+    return salesData.filter(sale => {
+      const itemName = (sale.item_name || '').toLowerCase();
+      const orderId  = String(sale.id);
+      return itemName.includes(q) || orderId.includes(q);
+    });
+  }, [salesData, searchQuery]);
 
   return (
     <div className={`home-layout${sidebarOpen ? ' sidebar-open' : ''}`}>

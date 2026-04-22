@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import logo from '../images/inventory_logo.png';
 import './loginPage.css';
@@ -8,20 +8,19 @@ function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
-  const handleLogin = (e) => {
+  const handleLogin = useCallback((e) => {
     e.preventDefault();
     if (username.trim() === "admin" && password === "123") {
       navigate('/home');
     } else {
       alert("Invalid username or password!\n\n Hint: check click forgot login!");
     }
-  };
+  }, [username, password, navigate]);
 
-  const handleForgotLogin = (e) => {
-    e.preventDefault(); // Prevents form submission
-    // Show pop-up with default credentials
+  const handleForgotLogin = useCallback((e) => {
+    e.preventDefault();
     alert("Don't forget next time!\n\nUsername: admin\nPassword: 123");
-  };
+  }, []);
 
   return (
     <div className="login-container">

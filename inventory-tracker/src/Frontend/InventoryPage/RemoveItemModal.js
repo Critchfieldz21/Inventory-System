@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { itemsAPI } from '../../api';
 import './Modal.css';
 import './RemoveItemModal.css';
@@ -70,4 +70,4 @@ function RemoveItemModal({ selectedItems, inventory, onConfirm, onClose }) {
   );
 }
 
-export default RemoveItemModal;
+export default memo(RemoveItemModal);

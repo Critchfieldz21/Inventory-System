@@ -6,10 +6,10 @@
  * Props:
  *   financialData  {{ revenue: number, expenses: number, profit: number }}
  */
-import React from 'react';
+import React, { memo } from 'react';
 import './FinancialSummary.css';
 
-function FinancialSummary({ financialData }) {
+const FinancialSummary = memo(function FinancialSummary({ financialData }) {
   return (
     <div className="financial-summary">
       <div className="financial-card revenue">
@@ -26,6 +26,6 @@ function FinancialSummary({ financialData }) {
       </div>
     </div>
   );
-}
+});
 
 export default FinancialSummary;

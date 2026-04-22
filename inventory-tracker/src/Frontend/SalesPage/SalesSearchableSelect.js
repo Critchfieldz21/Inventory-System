@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 
 /**
  * SalesSearchableSelect
@@ -31,9 +31,10 @@ function SalesSearchableSelect({ options, value, onChange, placeholder, displayK
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  // Filter options by the typed query
-  const filtered = options.filter(o =>
-    o[displayKey].toLowerCase().includes(query.toLowerCase())
+  // Filter options by the typed query — memoized to avoid re-filtering on every render
+  const filtered = useMemo(() =>
+    options.filter(o => o[displayKey].toLowerCase().includes(query.toLowerCase())),
+    [options, query, displayKey]
   );
 
   const handleSelect = (option) => {

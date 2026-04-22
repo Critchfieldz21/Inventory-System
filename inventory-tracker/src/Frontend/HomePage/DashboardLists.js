@@ -8,12 +8,12 @@
  *   topItems      Array<{itemName, quantity}>
  *   lowStockItems Array<{id, name, stock}>
  */
-import React from 'react';
+import React, { memo } from 'react';
 import './DashboardLists.css';
 
 const PERIOD_LABEL = { week: 'This Week', month: 'This Month', quarter: 'This Quarter' };
 
-function DashboardLists({ topItems, lowStockItems, chartView = 'week' }) {
+const DashboardLists = memo(function DashboardLists({ topItems, lowStockItems, chartView = 'week' }) {
   const periodLabel = PERIOD_LABEL[chartView] || 'This Week';
   return (
     <div className="bottom-lists-row">
@@ -64,6 +64,6 @@ function DashboardLists({ topItems, lowStockItems, chartView = 'week' }) {
 
     </div>
   );
-}
+});
 
 export default DashboardLists;

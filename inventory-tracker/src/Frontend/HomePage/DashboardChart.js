@@ -4,7 +4,7 @@
  *   - Week / Month / Quarter time-range toggle (pill buttons)
  *   - Profit / Expenses / Revenue metric dropdown (arrow box)
  */
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo, memo } from 'react';
 import {
   AreaChart, Area, XAxis, YAxis,
   CartesianGrid, Tooltip, ResponsiveContainer
@@ -17,8 +17,7 @@ const METRIC_CONFIG = {
   revenue: { color: '#4f46e5', gradId: 'gradRevenue', dataKey: 'revenue',  label: 'Revenue'  },
 };
 
-function DashboardChart({
-  chartView, setChartView,
+function DashboardChart({  chartView, setChartView,
   chartMetric, setChartMetric,
   weeklyData, weeklyExpenseData, weeklyRevenueData,
   monthlyData, monthlyExpenseData, monthlyRevenueData,
@@ -39,16 +38,20 @@ function DashboardChart({
 
   const { color, gradId, dataKey, label } = METRIC_CONFIG[chartMetric] || METRIC_CONFIG.profit;
 
-  const sourceMap = {
-    week:    { profit: weeklyData,  expense: weeklyExpenseData,  revenue: weeklyRevenueData  },
-    month:   { profit: monthlyData, expense: monthlyExpenseData, revenue: monthlyRevenueData },
-    quarter: {
-      profit:  (quarterlyData?.profit   || []),
-      expense: (quarterlyData?.expenses || []),
-      revenue: (quarterlyData?.revenue  || []),
-    },
-  };
-  const chartData = (sourceMap[chartView] || sourceMap.week)[chartMetric] || [];
+  // Memoize chart data — only recompute when the view, metric, or underlying series changes
+  const chartData = useMemo(() => {
+    const sourceMap = {
+      week:    { profit: weeklyData,  expense: weeklyExpenseData,  revenue: weeklyRevenueData  },
+      month:   { profit: monthlyData, expense: monthlyExpenseData, revenue: monthlyRevenueData },
+      quarter: {
+        profit:  (quarterlyData?.profit   || []),
+        expense: (quarterlyData?.expenses || []),
+        revenue: (quarterlyData?.revenue  || []),
+      },
+    };
+    return (sourceMap[chartView] || sourceMap.week)[chartMetric] || [];
+  }, [chartView, chartMetric, weeklyData, weeklyExpenseData, weeklyRevenueData,
+      monthlyData, monthlyExpenseData, monthlyRevenueData, quarterlyData]);
 
   const metricOptions = [
     { value: 'profit',  label: 'Profit'   },
@@ -142,4 +145,4 @@ function DashboardChart({
   );
 }
 
-export default DashboardChart;
+export default memo(DashboardChart);

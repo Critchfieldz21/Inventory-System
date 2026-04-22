@@ -111,7 +111,7 @@
 
 .input-group input:focus {
   outline: none;
-  border-color: #4f46e5;
+  border-color: var(--primary-color);
   box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
 }
 
@@ -150,7 +150,7 @@
 
 .forgot-login-container a:hover,
 .forgot-login-link:hover {
-  color: #4f46e5;
+  color: var(--primary-color);
 }
 
 /* --- Responsive: stack on small screens --- */

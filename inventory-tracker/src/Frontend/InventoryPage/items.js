@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { itemsAPI, recipesAPI } from '../../api';
 import AddItemModal from './AddItemModal';
@@ -59,7 +59,7 @@ function Items() {
    * Formats prices into "$X.XX" strings for display, and merges any
    * categories already present in the DB into the local categories list.
    */
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       // Fetch both at the same time to avoid two sequential waits
@@ -96,10 +96,10 @@ function Items() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // Run loadData once when the page first loads
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => { loadData(); }, [loadData]);
 
   // ─────────────────────────────────────────────
   // XLSX Import
@@ -130,18 +130,18 @@ function Items() {
   // ─────────────────────────────────────────────
 
   /**
-   * getItemsInRecipes — returns a Set of item names that appear in at least one recipe.
-   * Used to prevent deleting items that a recipe depends on.
+   * itemsInRecipes — memoized Set of item names used in at least one recipe.
+   * Recalculated only when recipes or inventory changes.
    */
-  const getItemsInRecipes = () => {
-    const itemsUsed = new Set();
+  const itemsInRecipes = useMemo(() => {
+    const used = new Set();
     recipes.forEach(recipe => {
       inventory.forEach(item => {
-        if (recipe.ingredients.includes(item.name)) itemsUsed.add(item.name);
+        if (recipe.ingredients.includes(item.name)) used.add(item.name);
       });
     });
-    return itemsUsed;
-  };
+    return used;
+  }, [recipes, inventory]);
 
   // ─────────────────────────────────────────────
   // Button Click Handlers
@@ -151,12 +151,10 @@ function Items() {
    * handleRemoveClick — validates the selection before opening the Remove modal.
    * Blocks removal if no items are selected, or if any selected item is used in a recipe.
    */
-  const handleRemoveClick = () => {
+  const handleRemoveClick = useCallback(() => {
     if (selectedItems.size === 0) { alert('Please select at least one item to remove'); return; }
 
-    const itemsUsed = getItemsInRecipes();
-    // Check which selected items are recipe-protected
-    const blockedItems = Array.from(selectedItems).map(i => inventory[i].name).filter(name => itemsUsed.has(name));
+    const blockedItems = Array.from(selectedItems).map(i => inventory[i].name).filter(name => itemsInRecipes.has(name));
 
     if (blockedItems.length > 0) {
       alert(`Cannot remove these items because they are used in recipes:\n\n${blockedItems.join(', ')}\n\nPlease remove the recipes first.`);
@@ -164,20 +162,20 @@ function Items() {
     }
 
     setShowRemoveModal(true);
-  };
+  }, [selectedItems, inventory, itemsInRecipes]);
 
   /**
    * handleEditClick — validates that exactly one item is selected,
    * then passes that item to EditItemModal and opens it.
    */
-  const handleEditClick = () => {
+  const handleEditClick = useCallback(() => {
     if (selectedItems.size === 0) { alert('Please select an item to edit'); return; }
     if (selectedItems.size > 1) { alert('Please select only one item to edit'); return; }
 
     const selectedIndex = Array.from(selectedItems)[0];
-    setEditingItem(inventory[selectedIndex]); // Pass the full item object to the modal
+    setEditingItem(inventory[selectedIndex]);
     setShowEditModal(true);
-  };
+  }, [selectedItems, inventory]);
 
   // ─────────────────────────────────────────────
   // Checkbox Handlers
@@ -187,34 +185,31 @@ function Items() {
    * handleCheckboxChange — toggles a single row's selection on/off.
    * Works by adding or removing the row's index from the selectedItems Set.
    */
-  const handleCheckboxChange = (index) => {
-    const newSelected = new Set(selectedItems);
-    newSelected.has(index) ? newSelected.delete(index) : newSelected.add(index);
-    setSelectedItems(newSelected);
-  };
+  const handleCheckboxChange = useCallback((index) => {
+    setSelectedItems(prev => {
+      const next = new Set(prev);
+      next.has(index) ? next.delete(index) : next.add(index);
+      return next;
+    });
+  }, []);
 
-  /**
-   * handleSelectAll — either selects all rows or deselects all rows,
-   * depending on whether all rows are currently selected.
-   */
-  const handleSelectAll = () => {
-    setSelectedItems(
-      selectedItems.size === inventory.length
-        ? new Set()                                     // All selected → deselect all
-        : new Set(inventory.map((_, i) => i))           // Not all selected → select all
+  const handleSelectAll = useCallback(() => {
+    setSelectedItems(prev =>
+      prev.size === inventory.length
+        ? new Set()
+        : new Set(inventory.map((_, i) => i))
     );
-  };
+  }, [inventory]);
 
-  // ─────────────────────────────────────────────
-  // Filter inventory by search query (name or category)
-  const filteredInventory = inventory.filter(item => {
-    if (!searchQuery.trim()) return true;
+  // Filter inventory by search query — memoized so it only reruns when data or query changes
+  const filteredInventory = useMemo(() => {
+    if (!searchQuery.trim()) return inventory;
     const q = searchQuery.toLowerCase();
-    return (
-      (item.name  && item.name.toLowerCase().includes(q)) ||
+    return inventory.filter(item =>
+      (item.name     && item.name.toLowerCase().includes(q)) ||
       (item.category && item.category.toLowerCase().includes(q))
     );
-  });
+  }, [inventory, searchQuery]);
 
   // ─────────────────────────────────────────────
   // Render
