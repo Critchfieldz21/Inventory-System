@@ -33,6 +33,24 @@ const apiRequest = async (endpoint, options = {}) => {
   }
 };
 
+// ============= AUTH API =============
+
+export const authAPI = {
+  register: async (credentials) => {
+    return apiRequest('/auth/register/', {
+      method: 'POST',
+      body: JSON.stringify(credentials),
+    });
+  },
+
+  login: async (credentials) => {
+    return apiRequest('/auth/login/', {
+      method: 'POST',
+      body: JSON.stringify(credentials),
+    });
+  },
+};
+
 // ============= ITEMS API =============
 
 export const itemsAPI = {
