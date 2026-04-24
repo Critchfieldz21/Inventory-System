@@ -1,15 +1,72 @@
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+from rest_framework.views import APIView
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from django.contrib.auth import authenticate
 from django.db.models import Sum
 from .models import Item, Recipe, Sales, Expense
-from .serializers import ItemSerializer, RecipeSerializer, SalesSerializer, ExpenseSerializer
+from .serializers import (
+    ItemSerializer,
+    RecipeSerializer,
+    SalesSerializer,
+    ExpenseSerializer,
+    UserRegistrationSerializer,
+    LoginSerializer,
+)
 from .xlsx_imports import (
     import_items_from_xlsx,
     import_recipes_from_xlsx,
     import_sales_from_xlsx,
 )
+
+
+class RegisterView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = UserRegistrationSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        return Response(
+            {
+                'id': user.id,
+                'username': user.username,
+                'message': 'User created successfully.',
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class LoginView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = LoginSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        user = authenticate(
+            request,
+            username=serializer.validated_data['username'],
+            password=serializer.validated_data['password'],
+        )
+
+        # authenticate performs secure hash verification of password
+        if user is None:
+            return Response(
+                {'detail': 'Invalid username or password.'},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        return Response(
+            {
+                'id': user.id,
+                'username': user.username,
+                'message': 'Login successful.',
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 class ItemViewSet(viewsets.ModelViewSet):
