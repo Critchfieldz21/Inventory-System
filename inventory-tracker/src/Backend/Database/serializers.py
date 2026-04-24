@@ -1,6 +1,33 @@
 from rest_framework import serializers
+from django.contrib.auth.models import User
 from .models import Item, Recipe, Sales, Expense
 import json
+
+
+class UserRegistrationSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, required=True)
+
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'password']
+        read_only_fields = ['id']
+
+    def validate_username(self, value):
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError('Username already exists.')
+        return value
+
+    def create(self, validated_data):
+        # create_user hashes password automatically
+        return User.objects.create_user(
+            username=validated_data['username'],
+            password=validated_data['password'],
+        )
+
+
+class LoginSerializer(serializers.Serializer):
+    username = serializers.CharField(required=True)
+    password = serializers.CharField(required=True, write_only=True)
 
 
 class ItemSerializer(serializers.ModelSerializer):
