@@ -121,7 +121,7 @@ function LoginPage() {
             </button>
 
             <button type="button" className="switch-auth-button" onClick={toggleAuthMode} disabled={isSubmitting}>
-              {isCreatingAccount ? 'Back to Sign In' : 'Create Account'}
+              {isCreatingAccount ? 'Back to Sign In' : 'Sign Up'}
             </button>
 
             {!isCreatingAccount && (

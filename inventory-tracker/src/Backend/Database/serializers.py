@@ -69,7 +69,7 @@ class RecipeSerializer(serializers.ModelSerializer):
             except (json.JSONDecodeError, ValueError, TypeError):
                 pass
             
-            # If not JSON, it's already in text format - just return it
+            # If not JSON, it's already in text format, just return it
             return obj.ingredients
         except Exception as e:
             return obj.ingredients if obj.ingredients else ""
