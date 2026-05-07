@@ -59,11 +59,24 @@ function DashboardChart({  chartView, setChartView,
     { value: 'revenue', label: 'Revenue'  },
   ];
 
-  const viewLabel = { week: 'Weekly', month: 'Monthly', quarter: 'Quarterly' };
+  const viewLabel = { week: 'Last 7 days', month: 'Last 30 days', quarter: 'Last 13 weeks' };
 
-  const xAxisInterval =
-    chartView === 'month'   ? Math.floor((chartData?.length || 1) / 7) :
-    chartView === 'quarter' ? 1 : 0;
+  // Recharts' "preserveStartEnd" interval still drops the last tick in some
+  // configurations (e.g. when the auto-computed step lands a few indices
+  // before the end). Compute the tick set explicitly instead so the rightmost
+  // label — today's date — is always rendered.
+  const xAxisTicks = useMemo(() => {
+    const n = chartData.length;
+    if (n === 0) return undefined;
+    if (chartView === 'week' || n <= 7) {
+      return chartData.map(d => d.name);
+    }
+    const desired = 7;
+    const step = (n - 1) / (desired - 1);
+    const indices = [];
+    for (let i = 0; i < desired; i++) indices.push(Math.round(i * step));
+    return [...new Set(indices)].map(i => chartData[i]?.name).filter(Boolean);
+  }, [chartView, chartData]);
 
   return (
     <div className="chart-container">
@@ -115,7 +128,7 @@ function DashboardChart({  chartView, setChartView,
       </div>
 
       <ResponsiveContainer width="100%" height={300}>
-        <AreaChart data={chartData}>
+        <AreaChart data={chartData} margin={{ top: 10, right: 24, left: 0, bottom: 0 }}>
           <defs>
             <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%"  stopColor={color} stopOpacity={0.8} />
@@ -127,7 +140,8 @@ function DashboardChart({  chartView, setChartView,
             dataKey="name"
             axisLine={false}
             tickLine={false}
-            interval={xAxisInterval}
+            ticks={xAxisTicks}
+            interval={0}
             tick={{ fontSize: chartView === 'week' ? 12 : 11 }}
           />
           <YAxis axisLine={false} tickLine={false} />

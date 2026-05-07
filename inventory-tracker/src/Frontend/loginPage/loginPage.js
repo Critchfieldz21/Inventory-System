@@ -1,6 +1,8 @@
 import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authAPI } from '../../api';
+import RecoveryCodeModal from './RecoveryCodeModal';
+import ResetPasswordModal from './ResetPasswordModal';
 import logo from '../images/inventory_logo.png';
 import './loginPage.css';
 
@@ -11,39 +13,63 @@ function LoginPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isCreatingAccount, setIsCreatingAccount] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  // Recovery code shown right after signup (or after login for legacy users).
+  // The user must explicitly acknowledge it before being routed to the dashboard.
+  const [recoveryCode, setRecoveryCode] = useState(null);
+  const [recoveryHeading, setRecoveryHeading] = useState('Save your recovery code');
+  const [pendingDestination, setPendingDestination] = useState('/home');
+
+  // Forgot-password modal state
+  const [showResetModal, setShowResetModal] = useState(false);
 
   const handleLogin = useCallback(async (e) => {
     e.preventDefault();
+    setError('');
 
     if (!username.trim()) {
-      alert('Please enter a username.');
+      setError('Please enter a username.');
       return;
     }
 
     if (isCreatingAccount && password !== confirmPassword) {
-      alert('Passwords do not match.');
+      setError('Passwords do not match.');
       return;
     }
 
     setIsSubmitting(true);
     try {
       if (isCreatingAccount) {
-        await authAPI.register({
+        const data = await authAPI.register({
           username: username.trim(),
           password,
         });
-        alert('Account created. Please sign in.');
-        setIsCreatingAccount(false);
-        setConfirmPassword('');
+        setRecoveryHeading('Save your recovery code');
+        setRecoveryCode(data.recovery_code);
+        setPendingDestination('/home');
       } else {
-        await authAPI.login({
+        const data = await authAPI.login({
           username: username.trim(),
           password,
         });
-        navigate('/home');
+        if (data.recovery_code) {
+          // Existing pre-recovery-code user: show the freshly-issued code once.
+          setRecoveryHeading('Your recovery code');
+          setRecoveryCode(data.recovery_code);
+          setPendingDestination('/home');
+        } else {
+          navigate('/home');
+        }
       }
-    } catch (error) {
-      alert(isCreatingAccount ? 'Unable to create account. Try a different username or stronger password.' : 'Invalid username or password.');
+    } catch (err) {
+      if (isCreatingAccount) {
+        setError(err.message || 'Unable to create account. Try a different username.');
+      } else {
+        setError(err.status === 401
+          ? 'Invalid username or password.'
+          : (err.message || 'Sign-in failed. Please try again.'));
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -51,12 +77,31 @@ function LoginPage() {
 
   const handleForgotLogin = useCallback((e) => {
     e.preventDefault();
-    alert('Please contact an administrator to reset your password.');
+    setError('');
+    setShowResetModal(true);
   }, []);
+
+  const handleResetSuccess = useCallback((newCode) => {
+    setShowResetModal(false);
+    setRecoveryHeading('Password reset — save your new recovery code');
+    setRecoveryCode(newCode);
+    setPendingDestination('/home');
+  }, []);
+
+  const handleAcknowledgeRecoveryCode = useCallback(() => {
+    setRecoveryCode(null);
+    if (isCreatingAccount) {
+      // Reset the form, drop into "sign in" mode for clarity, then navigate.
+      setIsCreatingAccount(false);
+      setConfirmPassword('');
+    }
+    navigate(pendingDestination);
+  }, [isCreatingAccount, navigate, pendingDestination]);
 
   const toggleAuthMode = useCallback(() => {
     setIsCreatingAccount((prev) => !prev);
     setConfirmPassword('');
+    setError('');
   }, []);
 
   return (
@@ -114,6 +159,8 @@ function LoginPage() {
               </div>
             )}
 
+            {error && <div className="login-error" role="alert">{error}</div>}
+
             <button type="submit" className="login-button" disabled={isSubmitting}>
               {isSubmitting
                 ? (isCreatingAccount ? 'Creating Account...' : 'Signing In...')
@@ -126,14 +173,30 @@ function LoginPage() {
 
             {!isCreatingAccount && (
               <div className="forgot-login-container">
-                <a href="/forgot-password" onClick={handleForgotLogin}>
-                  Forgot your login?
+                <a href="#reset" onClick={handleForgotLogin}>
+                  Forgot your password?
                 </a>
               </div>
             )}
           </form>
         </div>
       </div>
+
+      {recoveryCode && (
+        <RecoveryCodeModal
+          heading={recoveryHeading}
+          code={recoveryCode}
+          onAcknowledge={handleAcknowledgeRecoveryCode}
+        />
+      )}
+
+      {showResetModal && (
+        <ResetPasswordModal
+          onClose={() => setShowResetModal(false)}
+          onSuccess={handleResetSuccess}
+          initialUsername={username}
+        />
+      )}
 
     </div>
   );

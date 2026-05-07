@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { analyticsAPI } from '../../api';
+import { analyticsAPI, authAPI } from '../../api';
 import FinancialSummary from './FinancialSummary';
 import DashboardChart from './DashboardChart';
 import DashboardLists from './DashboardLists';
@@ -75,6 +75,11 @@ function Home() {
     fetchDashboardData();
   }, []);
 
+  const handleLogout = useCallback(async () => {
+    await authAPI.logout();
+    navigate('/');
+  }, [navigate]);
+
   // Derive active top-items list from chartView — memoized to avoid work on every render
   const activeTopItems = useMemo(() => (
     chartView === 'month'   ? monthlyTopItems   :
@@ -108,7 +113,7 @@ function Home() {
           <Link to="/sales" onClick={() => setSidebarOpen(false)}>Sales</Link>
           <Link to="/recipe" onClick={() => setSidebarOpen(false)}>Recipes</Link>
         </nav>
-        <button onClick={() => navigate('/')} className="logout-btn">Logout</button>
+        <button onClick={handleLogout} className="logout-btn">Logout</button>
       </aside>
 
       {/* --- Main Dashboard Content --- */}

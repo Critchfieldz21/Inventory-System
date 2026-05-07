@@ -67,7 +67,10 @@ def _validate_headers(headers, doc_type):
         raise ValueError(f"Missing required columns: {missing_str}")
 
 
-def import_items_from_xlsx(uploaded_file):
+def import_items_from_xlsx(uploaded_file, user):
+    if user is None or not getattr(user, "is_authenticated", False):
+        raise ValueError("Authenticated user is required for import.")
+
     headers, rows = _get_sheet_rows(uploaded_file)
     if not headers:
         raise ValueError("The uploaded file is empty.")
@@ -96,7 +99,7 @@ def import_items_from_xlsx(uploaded_file):
                 cost_price = _to_decimal(data.get("cost_price"), default="0")
                 price = _to_decimal(data.get("price"), default="0")
 
-                item = Item.objects.filter(name__iexact=name).first()
+                item = Item.objects.filter(user=user, name__iexact=name).first()
                 if item:
                     item.category = category or item.category
                     item.stock = item.stock + stock_delta
@@ -107,6 +110,7 @@ def import_items_from_xlsx(uploaded_file):
                     updated += 1
                 else:
                     new_item = Item(
+                        user=user,
                         name=name,
                         category=category,
                         stock=stock_delta,
@@ -128,7 +132,12 @@ def import_items_from_xlsx(uploaded_file):
     }
 
 
-def import_sales_from_xlsx(uploaded_file, created_by=None):
+def import_sales_from_xlsx(uploaded_file, user, created_by=None):
+    if user is None or not getattr(user, "is_authenticated", False):
+        raise ValueError("Authenticated user is required for import.")
+    if created_by is None:
+        created_by = user
+
     headers, rows = _get_sheet_rows(uploaded_file)
     if not headers:
         raise ValueError("The uploaded file is empty.")
@@ -137,6 +146,8 @@ def import_sales_from_xlsx(uploaded_file, created_by=None):
     created = 0
     skipped = 0
     errors = []
+
+    user_items = Item.objects.filter(user=user)
 
     with transaction.atomic():
         for idx, row in enumerate(rows, start=2):
@@ -152,10 +163,10 @@ def import_sales_from_xlsx(uploaded_file, created_by=None):
 
                 item = None
                 if isinstance(item_ref, (int, float)) or str(item_ref).isdigit():
-                    item = Item.objects.filter(id=int(item_ref)).first()
+                    item = user_items.filter(id=int(item_ref)).first()
                 if item is None and item_ref not in (None, ""):
                     item_name = str(item_ref).strip()
-                    item = Item.objects.filter(name__iexact=item_name).first()
+                    item = user_items.filter(name__iexact=item_name).first()
                 if item is None:
                     raise ValueError("item not found by id or name")
 
@@ -198,7 +209,7 @@ def import_sales_from_xlsx(uploaded_file, created_by=None):
     }
 
 
-def _parse_ingredients(raw_ingredients):
+def _parse_ingredients(raw_ingredients, user_items):
     if raw_ingredients in (None, ""):
         raise ValueError("ingredients is required")
 
@@ -217,9 +228,9 @@ def _parse_ingredients(raw_ingredients):
                 qty = int(ing.get("quantity", 1))
                 item = None
                 if isinstance(item_ref, int) or str(item_ref).isdigit():
-                    item = Item.objects.filter(id=int(item_ref)).first()
+                    item = user_items.filter(id=int(item_ref)).first()
                 if item is None and item_ref not in (None, ""):
-                    item = Item.objects.filter(name__iexact=str(item_ref).strip()).first()
+                    item = user_items.filter(name__iexact=str(item_ref).strip()).first()
                 if item is None:
                     raise ValueError(f"ingredient item not found: {item_ref}")
                 ingredients.append({"item": item.id, "quantity": qty})
@@ -233,7 +244,7 @@ def _parse_ingredients(raw_ingredients):
         item_name, qty_str = (part.split(":", 1) + ["1"])[:2] if ":" in part else (part, "1")
         item_name = item_name.strip()
         qty = int(qty_str.strip())
-        item = Item.objects.filter(name__iexact=item_name).first()
+        item = user_items.filter(name__iexact=item_name).first()
         if item is None:
             raise ValueError(f"ingredient item not found: {item_name}")
         ingredients.append({"item": item.id, "quantity": qty})
@@ -244,7 +255,10 @@ def _parse_ingredients(raw_ingredients):
     return ingredients
 
 
-def import_recipes_from_xlsx(uploaded_file):
+def import_recipes_from_xlsx(uploaded_file, user):
+    if user is None or not getattr(user, "is_authenticated", False):
+        raise ValueError("Authenticated user is required for import.")
+
     headers, rows = _get_sheet_rows(uploaded_file)
     if not headers:
         raise ValueError("The uploaded file is empty.")
@@ -254,6 +268,8 @@ def import_recipes_from_xlsx(uploaded_file):
     updated = 0
     skipped = 0
     errors = []
+
+    user_items = Item.objects.filter(user=user)
 
     with transaction.atomic():
         for idx, row in enumerate(rows, start=2):
@@ -266,15 +282,15 @@ def import_recipes_from_xlsx(uploaded_file):
                 if not name:
                     raise ValueError("name is required")
 
-                ingredients = _parse_ingredients(data.get("ingredients"))
+                ingredients = _parse_ingredients(data.get("ingredients"), user_items)
 
-                recipe = Recipe.objects.filter(name__iexact=name).first()
+                recipe = Recipe.objects.filter(user=user, name__iexact=name).first()
                 if recipe:
                     recipe.ingredients = json.dumps(ingredients)
                     recipe.save()
                     updated += 1
                 else:
-                    Recipe.objects.create(name=name, ingredients=json.dumps(ingredients))
+                    Recipe.objects.create(user=user, name=name, ingredients=json.dumps(ingredients))
                     created += 1
             except Exception as exc:
                 skipped += 1

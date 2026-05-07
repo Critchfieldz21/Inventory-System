@@ -5,49 +5,105 @@ const API_BASE_URL = 'http://localhost:8000/api';
 // Normalize paginated (DRF) or plain array responses into a flat array
 const toArray = (data) => Array.isArray(data) ? data : (data?.results ?? []);
 
+// ============= AUTH SESSION =============
+// Token + username are kept in localStorage so a page reload does not log the
+// user out. Reading directly avoids the need for an auth context provider.
+
+const TOKEN_KEY = 'inventory_auth_token';
+const USERNAME_KEY = 'inventory_auth_username';
+
+export const auth = {
+  getToken: () => localStorage.getItem(TOKEN_KEY),
+  getUsername: () => localStorage.getItem(USERNAME_KEY),
+  isAuthenticated: () => Boolean(localStorage.getItem(TOKEN_KEY)),
+  setSession: (token, username) => {
+    localStorage.setItem(TOKEN_KEY, token);
+    if (username) localStorage.setItem(USERNAME_KEY, username);
+  },
+  clearSession: () => {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USERNAME_KEY);
+  },
+};
+
+export class ApiError extends Error {
+  constructor(message, status) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+  }
+}
+
 // Helper function for API requests
 const apiRequest = async (endpoint, options = {}) => {
   const url = `${API_BASE_URL}${endpoint}`;
   const isFormData = options.body instanceof FormData;
-  const defaultHeaders = isFormData ? {} : { 'Content-Type': 'application/json' };
-  const defaultOptions = {
-    headers: defaultHeaders,
-  };
+  const headers = { ...(isFormData ? {} : { 'Content-Type': 'application/json' }) };
 
-  try {
-    const response = await fetch(url, { ...defaultOptions, ...options });
-    
-    if (!response.ok) {
-      throw new Error(`API Error: ${response.status} ${response.statusText}`);
-    }
+  const token = auth.getToken();
+  if (token) headers['Authorization'] = `Token ${token}`;
+  if (options.headers) Object.assign(headers, options.headers);
 
-    // Handle 204 No Content (successful DELETE)
-    if (response.status === 204) {
-      return { success: true };
-    }
+  const response = await fetch(url, { ...options, headers });
 
-    return await response.json();
-  } catch (error) {
-    console.error(`Error fetching ${endpoint}:`, error);
-    throw error;
+  if (response.status === 401) {
+    // Token has been revoked or never existed — purge local state so the
+    // route guard sends the user back to the login screen.
+    auth.clearSession();
   }
+
+  if (!response.ok) {
+    let detail = `${response.status} ${response.statusText}`;
+    try {
+      const body = await response.json();
+      detail = body.detail || (typeof body === 'string' ? body : JSON.stringify(body));
+    } catch (_) { /* response had no JSON body */ }
+    throw new ApiError(detail, response.status);
+  }
+
+  if (response.status === 204) return { success: true };
+  return response.json();
 };
 
 // ============= AUTH API =============
 
 export const authAPI = {
   register: async (credentials) => {
-    return apiRequest('/auth/register/', {
+    const data = await apiRequest('/auth/register/', {
       method: 'POST',
       body: JSON.stringify(credentials),
     });
+    if (data.token) auth.setSession(data.token, data.username);
+    return data;
   },
 
   login: async (credentials) => {
-    return apiRequest('/auth/login/', {
+    const data = await apiRequest('/auth/login/', {
       method: 'POST',
       body: JSON.stringify(credentials),
     });
+    if (data.token) auth.setSession(data.token, data.username);
+    return data;
+  },
+
+  logout: async () => {
+    try {
+      await apiRequest('/auth/logout/', { method: 'POST' });
+    } catch (_) {
+      // Even if the server call fails (e.g. offline) we still want to drop
+      // the local session so the user lands on the login screen.
+    } finally {
+      auth.clearSession();
+    }
+  },
+
+  resetPassword: async ({ username, recovery_code, new_password }) => {
+    const data = await apiRequest('/auth/reset-password/', {
+      method: 'POST',
+      body: JSON.stringify({ username, recovery_code, new_password }),
+    });
+    if (data.token) auth.setSession(data.token, data.username);
+    return data;
   },
 };
 
@@ -627,15 +683,12 @@ export const analyticsAPI = {
   // ── Single-fetch dashboard: replaces 11 individual analytics calls ──────────
   // Fetches items, recipes, sales, and expenses ONCE (4 requests) and
   // derives all data the home dashboard needs, eliminating ~20 redundant calls.
-  getDashboardAll: async (month, year) => {
+  getDashboardAll: async () => {
     try {
-      const now         = new Date();
-      const targetMonth = month !== undefined ? month : now.getMonth();
-      const targetYear  = year  !== undefined ? year  : now.getFullYear();
-      const monthNames  = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-      const daysOfWeek  = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+      const now        = new Date();
+      const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      const MS_PER_DAY = 86400000;
 
-      // Single batch fetch — 5 requests instead of ~20
       const [itemsRaw, , salesRaw, expensesRaw, expenseTotalRaw] = await Promise.all([
         itemsAPI.getAll(),
         recipesAPI.getAll(),
@@ -661,87 +714,89 @@ export const analyticsAPI = {
       // ── Low stock ───────────────────────────────────────────────────
       const lowStockItems = itemsArray.filter(item => item.stock < 10);
 
-      // ── Weekly ──────────────────────────────────────────────────────
-      const weeklyRevMap = Object.fromEntries(daysOfWeek.map(d => [d, 0]));
-      const weeklyExpMap = Object.fromEntries(daysOfWeek.map(d => [d, 0]));
+      // ── Rolling daily window helper ─────────────────────────────────
+      // Each chart view uses a rolling window ending today so the most
+      // recent activity is always visible. Calendar-bound windows (e.g.
+      // "this calendar month") render as a flat line whenever the user's
+      // data happens to sit in an adjacent month, which was the bug we hit.
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-      completedSales.forEach(sale => {
-        try { weeklyRevMap[daysOfWeek[new Date(sale.date).getDay()]] += parseFloat(sale.total || 0); }
-        catch (e) { /* skip */ }
-      });
-      expensesArray.forEach(exp => {
-        try { weeklyExpMap[daysOfWeek[new Date(exp.date).getDay()]] += parseFloat(exp.amount || 0); }
-        catch (e) { /* skip */ }
-      });
+      const buildDailyWindow = (windowSize) => {
+        const start = new Date(todayStart.getTime() - (windowSize - 1) * MS_PER_DAY);
+        const revenue = new Array(windowSize).fill(0);
+        const expenses = new Array(windowSize).fill(0);
+        const dayIdx = (date) => {
+          const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+          return Math.round((d.getTime() - start.getTime()) / MS_PER_DAY);
+        };
+        completedSales.forEach(s => {
+          try {
+            const i = dayIdx(new Date(s.date));
+            if (i >= 0 && i < windowSize) revenue[i] += parseFloat(s.total || 0);
+          } catch (_) { /* skip bad date */ }
+        });
+        expensesArray.forEach(e => {
+          try {
+            const i = dayIdx(new Date(e.date));
+            if (i >= 0 && i < windowSize) expenses[i] += parseFloat(e.amount || 0);
+          } catch (_) { /* skip */ }
+        });
+        const labels = Array.from({ length: windowSize }, (_, i) => {
+          const d = new Date(start.getTime() + i * MS_PER_DAY);
+          return `${monthNames[d.getMonth()]} ${d.getDate()}`;
+        });
+        return { revenue, expenses, labels, start };
+      };
 
-      const weeklyRevenueData = daysOfWeek.map(d => ({ name: d, revenue:  parseFloat(weeklyRevMap[d].toFixed(2)) }));
-      const weeklyExpenseData = daysOfWeek.map(d => ({ name: d, expenses: parseFloat(weeklyExpMap[d].toFixed(2)) }));
-      const weeklyData        = daysOfWeek.map(d => ({ name: d, profit:   parseFloat((weeklyRevMap[d] - weeklyExpMap[d]).toFixed(2)) }));
-
-      // ── Monthly ─────────────────────────────────────────────────────
-      const daysInMonth  = new Date(targetYear, targetMonth + 1, 0).getDate();
-      const dailyRevenue  = new Array(daysInMonth + 1).fill(0);
-      const dailyExpenses = new Array(daysInMonth + 1).fill(0);
-
-      completedSales.forEach(sale => {
-        try {
-          const d = new Date(sale.date);
-          if (d.getFullYear() === targetYear && d.getMonth() === targetMonth)
-            dailyRevenue[d.getDate()] += parseFloat(sale.total || 0);
-        } catch (e) { /* skip */ }
-      });
-      expensesArray.forEach(exp => {
-        try {
-          const d = new Date(exp.date);
-          if (d.getFullYear() === targetYear && d.getMonth() === targetMonth)
-            dailyExpenses[d.getDate()] += parseFloat(exp.amount || 0);
-        } catch (e) { /* skip */ }
-      });
-
-      const buildMonthly = (field, getValue) =>
-        Array.from({ length: daysInMonth }, (_, i) => ({
-          name: `${monthNames[targetMonth]} ${i + 1}`,
-          [field]: parseFloat(getValue(i + 1).toFixed(2)),
+      const seriesFromWindow = (win, field, valueFn) =>
+        win.labels.map((name, i) => ({
+          name,
+          [field]: parseFloat(valueFn(i).toFixed(2)),
         }));
 
-      const monthlyData        = buildMonthly('profit',   d => dailyRevenue[d] - dailyExpenses[d]);
-      const monthlyRevenueData = buildMonthly('revenue',  d => dailyRevenue[d]);
-      const monthlyExpenseData = buildMonthly('expenses', d => dailyExpenses[d]);
+      // Weekly: rolling last 7 days (7 daily buckets)
+      const weekly = buildDailyWindow(7);
+      const weeklyRevenueData = seriesFromWindow(weekly, 'revenue',  i => weekly.revenue[i]);
+      const weeklyExpenseData = seriesFromWindow(weekly, 'expenses', i => weekly.expenses[i]);
+      const weeklyData        = seriesFromWindow(weekly, 'profit',   i => weekly.revenue[i] - weekly.expenses[i]);
 
-      // ── Quarterly ───────────────────────────────────────────────────
-      const currentMonth      = now.getMonth();
-      const quarterStartMonth = Math.floor(currentMonth / 3) * 3;
-      const qStart            = new Date(targetYear, quarterStartMonth, 1);
-      const qEnd              = new Date(targetYear, quarterStartMonth + 3, 0);
-      const numWeeks          = Math.ceil((Math.round((qEnd - qStart) / 86400000) + 1) / 7);
-      const weekRevenue       = new Array(numWeeks).fill(0);
-      const weekExpenses      = new Array(numWeeks).fill(0);
+      // Monthly: rolling last 30 days (30 daily buckets)
+      const monthly = buildDailyWindow(30);
+      const monthlyRevenueData = seriesFromWindow(monthly, 'revenue',  i => monthly.revenue[i]);
+      const monthlyExpenseData = seriesFromWindow(monthly, 'expenses', i => monthly.expenses[i]);
+      const monthlyData        = seriesFromWindow(monthly, 'profit',   i => monthly.revenue[i] - monthly.expenses[i]);
 
-      completedSales.forEach(sale => {
+      // Quarterly: rolling last 13 weeks = 91 days, bucketed by week
+      const QWEEKS = 13;
+      const qDays = QWEEKS * 7;
+      const qStart = new Date(todayStart.getTime() - (qDays - 1) * MS_PER_DAY);
+      const weekRevenue  = new Array(QWEEKS).fill(0);
+      const weekExpenses = new Array(QWEEKS).fill(0);
+
+      const weekBucket = (date) => {
+        const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+        return Math.floor(Math.round((d.getTime() - qStart.getTime()) / MS_PER_DAY) / 7);
+      };
+
+      completedSales.forEach(s => {
         try {
-          const d = new Date(sale.date);
-          if (d >= qStart && d <= qEnd) {
-            const wk = Math.floor(Math.round((d - qStart) / 86400000) / 7);
-            weekRevenue[wk] += parseFloat(sale.total || 0);
-          }
-        } catch (e) { /* skip */ }
+          const i = weekBucket(new Date(s.date));
+          if (i >= 0 && i < QWEEKS) weekRevenue[i] += parseFloat(s.total || 0);
+        } catch (_) { /* skip */ }
       });
-      expensesArray.forEach(exp => {
+      expensesArray.forEach(e => {
         try {
-          const d = new Date(exp.date);
-          if (d >= qStart && d <= qEnd) {
-            const wk = Math.floor(Math.round((d - qStart) / 86400000) / 7);
-            weekExpenses[wk] += parseFloat(exp.amount || 0);
-          }
-        } catch (e) { /* skip */ }
+          const i = weekBucket(new Date(e.date));
+          if (i >= 0 && i < QWEEKS) weekExpenses[i] += parseFloat(e.amount || 0);
+        } catch (_) { /* skip */ }
       });
 
-      const qName = `Q${Math.floor(currentMonth / 3) + 1}`;
       const quarterlyData = { profit: [], expenses: [], revenue: [] };
-      for (let w = 0; w < numWeeks; w++) {
-        const name = `${qName} Wk ${w + 1}`;
-        const rev  = parseFloat(weekRevenue[w].toFixed(2));
-        const exp  = parseFloat(weekExpenses[w].toFixed(2));
+      for (let w = 0; w < QWEEKS; w++) {
+        const ws = new Date(qStart.getTime() + w * 7 * MS_PER_DAY);
+        const name = `${monthNames[ws.getMonth()]} ${ws.getDate()}`;
+        const rev = parseFloat(weekRevenue[w].toFixed(2));
+        const exp = parseFloat(weekExpenses[w].toFixed(2));
         quarterlyData.revenue.push( { name, revenue:  rev });
         quarterlyData.expenses.push({ name, expenses: exp });
         quarterlyData.profit.push(  { name, profit:   parseFloat((rev - exp).toFixed(2)) });
@@ -751,7 +806,7 @@ export const analyticsAPI = {
       const getTopItems = (periodStart) => {
         const filtered = completedSales.filter(s => {
           if (!periodStart) return true;
-          try { return new Date(s.date) >= periodStart; } catch (e) { return false; }
+          try { return new Date(s.date) >= periodStart; } catch (_) { return false; }
         });
         const map = {};
         filtered.forEach(sale => {
@@ -765,10 +820,6 @@ export const analyticsAPI = {
         return Object.values(map).sort((a, b) => b.quantity - a.quantity).slice(0, 3);
       };
 
-      const weekStart    = new Date(now); weekStart.setDate(now.getDate() - now.getDay()); weekStart.setHours(0,0,0,0);
-      const monthStart   = new Date(now.getFullYear(), now.getMonth(), 1);
-      const quarterStart = new Date(now.getFullYear(), quarterStartMonth, 1);
-
       return {
         financialData,
         lowStockItems,
@@ -779,9 +830,9 @@ export const analyticsAPI = {
         monthlyExpenseData,
         monthlyRevenueData,
         quarterlyData,
-        weeklyTopItems:    getTopItems(weekStart),
-        monthlyTopItems:   getTopItems(monthStart),
-        quarterlyTopItems: getTopItems(quarterStart),
+        weeklyTopItems:    getTopItems(weekly.start),
+        monthlyTopItems:   getTopItems(monthly.start),
+        quarterlyTopItems: getTopItems(qStart),
       };
     } catch (error) {
       console.error('Error fetching all dashboard data:', error);

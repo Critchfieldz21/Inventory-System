@@ -1,12 +1,17 @@
+import secrets
+
 from rest_framework import viewsets, status
+from rest_framework.authtoken.models import Token
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.views import APIView
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from django.contrib.auth import authenticate
+from django.contrib.auth.hashers import check_password, make_password
+from django.contrib.auth.models import User
 from django.db.models import Sum
-from .models import Item, Recipe, Sales, Expense
+from .models import Item, Recipe, Sales, Expense, UserSecret
 from .serializers import (
     ItemSerializer,
     RecipeSerializer,
@@ -14,12 +19,37 @@ from .serializers import (
     ExpenseSerializer,
     UserRegistrationSerializer,
     LoginSerializer,
+    ResetPasswordSerializer,
 )
 from .xlsx_imports import (
     import_items_from_xlsx,
     import_recipes_from_xlsx,
     import_sales_from_xlsx,
 )
+
+
+# Recovery codes use an unambiguous alphabet (no 0/O/1/I) so users transcribing
+# them by hand are less likely to confuse characters.
+_RECOVERY_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+
+
+def _generate_recovery_code() -> str:
+    raw = ''.join(secrets.choice(_RECOVERY_ALPHABET) for _ in range(16))
+    return f'{raw[:4]}-{raw[4:8]}-{raw[8:12]}-{raw[12:16]}'
+
+
+def _issue_recovery_code(user: User) -> str:
+    plaintext = _generate_recovery_code()
+    UserSecret.objects.update_or_create(
+        user=user,
+        defaults={'recovery_code_hash': make_password(plaintext)},
+    )
+    return plaintext
+
+
+def _issue_token(user: User) -> str:
+    Token.objects.filter(user=user).delete()
+    return Token.objects.create(user=user).key
 
 
 class RegisterView(APIView):
@@ -29,11 +59,13 @@ class RegisterView(APIView):
         serializer = UserRegistrationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
+        recovery_code = _issue_recovery_code(user)
+        token, _ = Token.objects.get_or_create(user=user)
         return Response(
             {
-                'id': user.id,
+                'token': token.key,
                 'username': user.username,
-                'message': 'User created successfully.',
+                'recovery_code': recovery_code,
             },
             status=status.HTTP_201_CREATED,
         )
@@ -51,19 +83,70 @@ class LoginView(APIView):
             username=serializer.validated_data['username'],
             password=serializer.validated_data['password'],
         )
-
-        # authenticate performs secure hash verification of password
         if user is None:
             return Response(
                 {'detail': 'Invalid username or password.'},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
+        token, _ = Token.objects.get_or_create(user=user)
+
+        # Existing users from before recovery codes existed get one issued on
+        # first login. The plaintext is returned exactly once so the client can
+        # surface it to the user.
+        new_recovery_code = None
+        if not UserSecret.objects.filter(user=user).exists():
+            new_recovery_code = _issue_recovery_code(user)
+
+        payload = {'token': token.key, 'username': user.username}
+        if new_recovery_code is not None:
+            payload['recovery_code'] = new_recovery_code
+        return Response(payload, status=status.HTTP_200_OK)
+
+
+class LogoutView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        Token.objects.filter(user=request.user).delete()
+        return Response({'detail': 'Logged out.'}, status=status.HTTP_200_OK)
+
+
+class ResetPasswordView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = ResetPasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        username = serializer.validated_data['username'].strip()
+        recovery_code = serializer.validated_data['recovery_code'].strip().upper()
+        new_password = serializer.validated_data['new_password']
+
+        invalid = Response(
+            {'detail': 'Invalid username or recovery code.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+        try:
+            user = User.objects.get(username=username)
+        except User.DoesNotExist:
+            return invalid
+
+        secret = UserSecret.objects.filter(user=user).first()
+        if secret is None or not check_password(recovery_code, secret.recovery_code_hash):
+            return invalid
+
+        user.set_password(new_password)
+        user.save()
+
+        new_recovery_code = _issue_recovery_code(user)
+        token_key = _issue_token(user)
+
         return Response(
             {
-                'id': user.id,
+                'token': token_key,
                 'username': user.username,
-                'message': 'Login successful.',
+                'recovery_code': new_recovery_code,
             },
             status=status.HTTP_200_OK,
         )
@@ -135,7 +218,7 @@ class ItemViewSet(viewsets.ModelViewSet):
             return Response({'detail': 'Only .xlsx files are supported.'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            result = import_items_from_xlsx(uploaded_file)
+            result = import_items_from_xlsx(uploaded_file, user=request.user)
             return Response(result, status=status.HTTP_200_OK)
         except Exception as exc:
             return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
@@ -164,7 +247,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
             return Response({'detail': 'Only .xlsx files are supported.'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            result = import_recipes_from_xlsx(uploaded_file)
+            result = import_recipes_from_xlsx(uploaded_file, user=request.user)
             return Response(result, status=status.HTTP_200_OK)
         except Exception as exc:
             return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
@@ -228,8 +311,7 @@ class SalesViewSet(viewsets.ModelViewSet):
             return Response({'detail': 'Only .xlsx files are supported.'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            user = request.user if request.user.is_authenticated else None
-            result = import_sales_from_xlsx(uploaded_file, created_by=user)
+            result = import_sales_from_xlsx(uploaded_file, user=request.user, created_by=request.user)
             return Response(result, status=status.HTTP_200_OK)
         except Exception as exc:
             return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)

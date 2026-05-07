@@ -182,6 +182,114 @@
   color: var(--primary-color);
 }
 
+/* --- Inline error message --- */
+.login-error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  margin: 4px 0 8px;
+}
+
+/* --- Recovery code / reset password modal --- */
+.recovery-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.recovery-modal {
+  background: white;
+  width: 100%;
+  max-width: 460px;
+  border-radius: 14px;
+  padding: 32px;
+  box-shadow: 0 24px 50px rgba(0, 0, 0, 0.25);
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+}
+
+.recovery-modal h3 {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 8px;
+}
+
+.recovery-explainer {
+  font-size: 0.9rem;
+  color: #6b7280;
+  line-height: 1.5;
+  margin-bottom: 22px;
+}
+
+.recovery-code-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: #f3f4f6;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 20px;
+}
+
+.recovery-code-box code {
+  font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #111827;
+  word-break: break-all;
+}
+
+.recovery-copy-btn {
+  flex-shrink: 0;
+  background: white;
+  border: 1.5px solid #d1d5db;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #374151;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.recovery-copy-btn:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
+.recovery-confirm {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.88rem;
+  color: #374151;
+  margin-bottom: 20px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.recovery-confirm input[type="checkbox"] {
+  margin-top: 2px;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.recovery-modal .login-button:disabled {
+  background: #9ca3af;
+}
+
 /* --- Responsive: stack on small screens --- */
 @media (max-width: 720px) {
   .login-container {

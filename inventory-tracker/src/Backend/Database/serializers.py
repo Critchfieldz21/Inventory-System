@@ -30,6 +30,12 @@ class LoginSerializer(serializers.Serializer):
     password = serializers.CharField(required=True, write_only=True)
 
 
+class ResetPasswordSerializer(serializers.Serializer):
+    username = serializers.CharField(required=True)
+    recovery_code = serializers.CharField(required=True, write_only=True)
+    new_password = serializers.CharField(required=True, write_only=True, min_length=6)
+
+
 class ItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = Item

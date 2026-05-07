@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { itemsAPI, recipesAPI } from '../../api';
+import { itemsAPI, recipesAPI, authAPI } from '../../api';
 import AddItemModal from './AddItemModal';
 import EditItemModal from './EditItemModal';
 import RemoveItemModal from './RemoveItemModal';
@@ -115,7 +115,13 @@ function Items() {
     try {
       const result = await itemsAPI.importXlsx(file);
       await loadData(); // Refresh the table after import
-      alert(`Import complete. Created: ${result.created || 0}, Updated: ${result.updated || 0}, Skipped: ${result.skipped || 0}`);
+      const errs = result.errors || [];
+      const summary = `Import complete. Created: ${result.created || 0}, Updated: ${result.updated || 0}, Skipped: ${result.skipped || 0}`;
+      const detail = errs.length
+        ? '\n\nFirst errors:\n' + errs.slice(0, 5).map(e => `Row ${e.row}: ${e.error}`).join('\n')
+        + (errs.length > 5 ? `\n…and ${errs.length - 5} more` : '')
+        : '';
+      alert(summary + detail);
     } catch (err) {
       console.error('Error importing items xlsx:', err);
       alert('Failed to import items xlsx file');
@@ -241,7 +247,7 @@ function Items() {
           <Link to="/sales" onClick={() => setSidebarOpen(false)}>Sales</Link>
           <Link to="/recipe" onClick={() => setSidebarOpen(false)}>Recipes</Link>
         </nav>
-        <button onClick={() => navigate('/')} className="logout-btn">Logout</button>
+        <button onClick={async () => { await authAPI.logout(); navigate('/'); }} className="logout-btn">Logout</button>
       </aside>
 
       {/* ── Main Content Area ── */}

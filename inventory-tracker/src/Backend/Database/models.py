@@ -3,6 +3,22 @@ from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
+
+class UserSecret(models.Model):
+    """Stores a hashed one-time recovery code per user, used for password reset.
+
+    The plaintext code is shown to the user only once (at signup or after a
+    successful reset) and is regenerated on every successful reset so that any
+    older copy is invalidated.
+    """
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='secret')
+    recovery_code_hash = models.CharField(max_length=128)
+    code_set_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f'recovery-code({self.user.username})'
+
+
 class Item(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='items')
     name = models.CharField(max_length=255)
