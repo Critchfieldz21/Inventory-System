@@ -33,8 +33,8 @@ class LoginSerializer(serializers.Serializer):
 class ItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = Item
-        fields = ['id', 'name', 'category', 'stock', 'cost_price', 'price', 'created_at', 'updated_at']
-        read_only_fields = ['created_at', 'updated_at']
+        fields = ['id', 'user', 'name', 'category', 'stock', 'cost_price', 'price', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'user', 'created_at', 'updated_at']
     
 
 
@@ -44,8 +44,8 @@ class RecipeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Recipe
-        fields = ['id', 'name', 'ingredients', 'ingredients_display', 'created_at', 'updated_at']
-        read_only_fields = ['created_at', 'updated_at']
+        fields = ['id', 'user', 'name', 'ingredients', 'ingredients_display', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'user', 'created_at', 'updated_at']
 
     def get_ingredients_display(self, obj):
         """Return ingredients in a readable format"""

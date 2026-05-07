@@ -74,12 +74,21 @@ class ItemViewSet(viewsets.ModelViewSet):
     serializer_class = ItemSerializer
     parser_classes = [JSONParser, MultiPartParser, FormParser]
 
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_authenticated:
+            return Item.objects.filter(user=user)
+        return Item.objects.none()
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
     @action(detail=False, methods=['get'])
     def by_category(self, request):
         """Get items filtered by category"""
         category = request.query_params.get('category', None)
         if category:
-            items = Item.objects.filter(category=category)
+            items = self.get_queryset().filter(category=category)
             serializer = self.get_serializer(items, many=True)
             return Response(serializer.data)
         return Response([])
@@ -101,7 +110,7 @@ class ItemViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def with_sales_info(self, request):
         """Get all items with their total quantity sold"""
-        items = Item.objects.all()
+        items = self.get_queryset()
         data = []
         for item in items:
             total_sold = Sales.objects.filter(item=item).aggregate(Sum('quantity'))['quantity__sum'] or 0
@@ -137,6 +146,15 @@ class RecipeViewSet(viewsets.ModelViewSet):
     serializer_class = RecipeSerializer
     parser_classes = [JSONParser, MultiPartParser, FormParser]
 
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_authenticated:
+            return Recipe.objects.filter(user=user)
+        return Recipe.objects.none()
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
     @action(detail=False, methods=['post'])
     def import_xlsx(self, request):
         uploaded_file = request.FILES.get('file')
@@ -157,17 +175,26 @@ class SalesViewSet(viewsets.ModelViewSet):
     serializer_class = SalesSerializer
     parser_classes = [JSONParser, MultiPartParser, FormParser]
 
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_authenticated:
+            return Sales.objects.filter(item__user=user)
+        return Sales.objects.none()
+
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
+
     @action(detail=False, methods=['get'])
     def completed(self, request):
         """Get all completed sales"""
-        sales = Sales.objects.filter(status='Completed').order_by('-date')
+        sales = self.get_queryset().filter(status='Completed').order_by('-date')
         serializer = self.get_serializer(sales, many=True)
         return Response(serializer.data)
 
     @action(detail=False, methods=['get'])
     def pending(self, request):
         """Get all pending sales"""
-        sales = Sales.objects.filter(status='Pending').order_by('-date')
+        sales = self.get_queryset().filter(status='Pending').order_by('-date')
         serializer = self.get_serializer(sales, many=True)
         return Response(serializer.data)
 
@@ -176,14 +203,14 @@ class SalesViewSet(viewsets.ModelViewSet):
         """Get sales from today"""
         from django.utils import timezone
         today = timezone.now().date()
-        sales = Sales.objects.filter(date__date=today).order_by('-date')
+        sales = self.get_queryset().filter(date__date=today).order_by('-date')
         serializer = self.get_serializer(sales, many=True)
         return Response(serializer.data)
 
     @action(detail=False, methods=['get'])
     def revenue_summary(self, request):
         """Get revenue summary"""
-        sales = Sales.objects.filter(status='Completed')
+        sales = self.get_queryset().filter(status='Completed')
         total_revenue = sum(s.total for s in sales)
         
         return Response({
@@ -217,10 +244,16 @@ class ExpenseViewSet(viewsets.ModelViewSet):
     serializer_class = ExpenseSerializer
     parser_classes = [JSONParser, MultiPartParser, FormParser]
 
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_authenticated:
+            return Expense.objects.filter(item__user=user).order_by('-date')
+        return Expense.objects.none()
+
     @action(detail=False, methods=['get'])
     def total(self, request):
         """Return the sum of all purchase expenses"""
-        total = Expense.objects.aggregate(total=Sum('amount'))['total'] or 0
+        total = self.get_queryset().aggregate(total=Sum('amount'))['total'] or 0
         return Response({'total_expenses': float(total)})
 
     @action(detail=False, methods=['get'])
@@ -229,6 +262,6 @@ class ExpenseViewSet(viewsets.ModelViewSet):
         item_id = request.query_params.get('item_id')
         if not item_id:
             return Response({'detail': 'item_id query param required.'}, status=status.HTTP_400_BAD_REQUEST)
-        expenses = Expense.objects.filter(item_id=item_id).order_by('-date')
+        expenses = self.get_queryset().filter(item_id=item_id).order_by('-date')
         serializer = self.get_serializer(expenses, many=True)
         return Response(serializer.data)

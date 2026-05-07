@@ -4,6 +4,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 
 class Item(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='items')
     name = models.CharField(max_length=255)
     category = models.CharField(max_length=100)
     stock = models.IntegerField(default=0)
@@ -22,6 +23,7 @@ class Item(models.Model):
 
 
 class Recipe(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='recipes')
     name = models.CharField(max_length=255)
     ingredients = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)

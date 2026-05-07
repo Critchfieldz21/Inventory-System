@@ -35,6 +35,7 @@ class Command(BaseCommand):
         items = {}
         for item_data in items_data:
             item, created = Item.objects.get_or_create(
+                user=admin_user,
                 name=item_data['name'],
                 defaults={
                     'category': item_data['category'],
@@ -94,6 +95,7 @@ class Command(BaseCommand):
                 })
 
             recipe, created = Recipe.objects.get_or_create(
+                user=admin_user,
                 name=recipe_data['name'],
                 defaults={'ingredients': json.dumps(ingredients)}
             )
